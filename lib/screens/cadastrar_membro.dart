@@ -1,21 +1,35 @@
 import 'package:flutter/material.dart';
-import 'package:contador/data/database_helper.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:contador/models/membro.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
-
+import 'package:contador/services/firebase_service.dart';
 
 class CadastrarMembro extends StatefulWidget {
   @override
   _CadastrarMembroState createState() => _CadastrarMembroState();
 }
 
+enum TipoMembro {
+  Adolescentes,
+  Casados,
+  Noivos,
+  Solteiros,
+}
+
 class _CadastrarMembroState extends State<CadastrarMembro> {
   final TextEditingController _nomeController = TextEditingController();
+  final TextEditingController _dataAniversarioController = TextEditingController();
+  TipoMembro _tipoMembroSelecionado = TipoMembro.Adolescentes;
+  final TextEditingController _enderecoController = TextEditingController();
   String? _fotoPath;
-  final DatabaseHelper _databaseHelper = DatabaseHelper.instance;
+  final DatabaseReference _databaseReference =
+  FirebaseDatabase.instance.reference().child('membros');
+  final FirebaseService _firebaseService = FirebaseService();
+  final FirebaseStorage _storage = FirebaseStorage.instance;
 
   @override
   Widget build(BuildContext context) {
@@ -34,6 +48,32 @@ class _CadastrarMembroState extends State<CadastrarMembro> {
                 decoration: InputDecoration(labelText: 'Nome'),
               ),
               SizedBox(height: 16),
+              TextField(
+                controller: _dataAniversarioController,
+                decoration: InputDecoration(labelText: 'Data de Aniversário'),
+              ),
+              SizedBox(height: 16),
+              // Adicionar o DropdownButton para o tipo de membro
+              DropdownButton<TipoMembro>(
+                value: _tipoMembroSelecionado,
+                onChanged: (TipoMembro? newValue) {
+                  setState(() {
+                    _tipoMembroSelecionado = newValue!;
+                  });
+                },
+                items: TipoMembro.values.map((TipoMembro tipo) {
+                  return DropdownMenuItem<TipoMembro>(
+                    value: tipo,
+                    child: Text(tipo.toString().split('.').last),
+                  );
+                }).toList(),
+              ),
+              SizedBox(height: 16),
+              TextField(
+                controller: _enderecoController,
+                decoration: InputDecoration(labelText: 'Endereço'),
+              ),
+              SizedBox(height: 16),
               _fotoPath != null
                   ? Image.file(File(_fotoPath!))
                   : ElevatedButton(
@@ -41,6 +81,9 @@ class _CadastrarMembroState extends State<CadastrarMembro> {
                   _escolherFoto();
                 },
                 child: Text('Escolher Foto'),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: Size(double.infinity, 40),
+                ),
               ),
               SizedBox(height: 16),
               ElevatedButton(
@@ -48,6 +91,9 @@ class _CadastrarMembroState extends State<CadastrarMembro> {
                   _cadastrarMembro();
                 },
                 child: Text('Cadastrar'),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: Size(double.infinity, 40),
+                ),
               ),
               SizedBox(height: 16),
               ElevatedButton(
@@ -55,6 +101,9 @@ class _CadastrarMembroState extends State<CadastrarMembro> {
                   _exibirValores();
                 },
                 child: Text('Exibir Valores'),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: Size(double.infinity, 40),
+                ),
               ),
             ],
           ),
@@ -68,10 +117,8 @@ class _CadastrarMembroState extends State<CadastrarMembro> {
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
 
     if (pickedFile != null) {
-      // Copiar a foto para o diretório de documentos do aplicativo
-      _fotoPath = await _copiarFotoParaDocumentos(pickedFile.path);
-
       setState(() {
+        _fotoPath = pickedFile.path;
         print('Caminho da foto escolhido: $_fotoPath');
       });
     } else {
@@ -79,40 +126,47 @@ class _CadastrarMembroState extends State<CadastrarMembro> {
     }
   }
 
-  Future<String> _copiarFotoParaDocumentos(String caminhoOriginal) async {
-    final documentosDirectory = await getApplicationDocumentsDirectory();
-    final nomeArquivo = path.basename(caminhoOriginal);
-    final caminhoDestino = path.join(documentosDirectory.path, nomeArquivo);
-
-    await File(caminhoOriginal).copy(caminhoDestino);
-
-    return caminhoDestino;
-  }
-
-
-
-
   void _cadastrarMembro() async {
     String nome = _nomeController.text;
+    String? dataAniversario = _dataAniversarioController.text;
+    String endereco = _enderecoController.text;
 
     if (nome.isNotEmpty && _fotoPath != null) {
-      Membro novoMembro = Membro(nome: nome, foto: _fotoPath);
-      int idInserido = await _databaseHelper.insertMember(novoMembro);
-      print('Membro cadastrado com ID: $idInserido');
+      Directory appDocDir = await getApplicationDocumentsDirectory();
+      String fileName = path.basename(_fotoPath!);
+      String absolutePath = path.join(appDocDir.path, fileName);
+
+      await File(_fotoPath!).copy(absolutePath);
+
+      // Upload da foto para o Firebase Storage
+      UploadTask task = _storage
+          .ref()
+          .child('fotos/$_nomeController.jpg')
+          .putFile(File(absolutePath));
+      TaskSnapshot snapshot = await task;
+      String photoURL = await snapshot.ref.getDownloadURL();
+
+      Membro novoMembro = Membro(
+        nome: nome,
+        foto: photoURL,
+        dataAniversario: dataAniversario != null ? DateTime.tryParse(dataAniversario) : null,
+        tipoMembro: _tipoMembroSelecionado.toString().split('.').last,
+        endereco: endereco,
+      );
+
+      await _firebaseService.cadastrarMembro(novoMembro);
 
       _nomeController.clear();
-      setState(() {
-        _fotoPath = null;
-        print('Caminho da foto resetado para null.');
-      });
+      _dataAniversarioController.clear();
+      _enderecoController.clear();
+      _fotoPath = null;
 
-      // Adicionar mensagem de sucesso
       _showSnackBar('Membro cadastrado com sucesso!');
     } else {
-      // Exibir mensagem de erro, pois o nome e a foto são obrigatórios
       print('Nome e foto do membro são obrigatórios.');
     }
   }
+
 
   void _exibirValores() {
     showDialog(
@@ -124,6 +178,9 @@ class _CadastrarMembroState extends State<CadastrarMembro> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Nome: ${_nomeController.text}'),
+              Text('Data de Aniversário: ${_dataAniversarioController.text}'),
+              Text('Tipo de Membro: ${_tipoMembroSelecionado.toString().split('.').last}'),
+              Text('Endereço: ${_enderecoController.text}'),
               Text('Caminho da Foto: $_fotoPath'),
             ],
           ),

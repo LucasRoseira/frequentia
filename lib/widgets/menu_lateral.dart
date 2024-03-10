@@ -1,9 +1,8 @@
-// menu_lateral.dart
 import 'package:flutter/material.dart';
-import 'package:contador/screens/cadastrar_membro.dart';
-import 'package:contador/screens/listar_membros.dart';
+import 'package:contador/screens/listar_presencas.dart';
 import 'package:contador/screens/cadastro_presenca.dart';
-import 'package:contador/screens/listar_presencas.dart'; // Importe a tela de listar presenças
+import 'package:contador/screens/listar_membros.dart';
+import 'package:contador/screens/cadastrar_membro.dart';
 
 class MenuLateral extends StatelessWidget {
   @override
@@ -11,24 +10,8 @@ class MenuLateral extends StatelessWidget {
     return Drawer(
       child: ListView(
         children: [
-          DrawerHeader(
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary,
-            ),
-            child: Container(
-              height: 100,
-              child: Center(
-                child: Text(
-                  'Menu',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                  ),
-                ),
-              ),
-            ),
-          ),
           ListTile(
+            leading: ImageIcon(AssetImage('assets/icons/comparecimento.png')),
             title: Text(
               'Visualizar Presença',
               style: TextStyle(fontSize: 16),
@@ -41,6 +24,7 @@ class MenuLateral extends StatelessWidget {
             },
           ),
           ListTile(
+            leading: ImageIcon(AssetImage('assets/icons/adicionar-simbolo-do-usuario.png')),
             title: Text(
               'Cadastrar Presença',
               style: TextStyle(fontSize: 16),
@@ -53,6 +37,7 @@ class MenuLateral extends StatelessWidget {
             },
           ),
           ListTile(
+            leading: ImageIcon(AssetImage('assets/icons/visualizar.png')),
             title: Text(
               'Visualizar Membros',
               style: TextStyle(fontSize: 16),
@@ -65,6 +50,7 @@ class MenuLateral extends StatelessWidget {
             },
           ),
           ListTile(
+            leading: ImageIcon(AssetImage('assets/icons/membro-da-equipe.png')),
             title: Text(
               'Cadastrar Membros',
               style: TextStyle(fontSize: 16),

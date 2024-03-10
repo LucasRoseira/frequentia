@@ -1,12 +1,9 @@
 name: contador
 description: "A new Flutter project."
 publish_to: 'none'
-
 version: 1.0.0+1
-
 environment:
-  sdk: '>=3.3.0 <4.0.0'
-
+  sdk: ">=2.12.0 <3.0.0"
 dependencies:
   flutter:
     sdk: flutter
@@ -17,11 +14,20 @@ dependencies:
   path_provider: ^2.0.15
   mobx: ^2.0.0
   flutter_mobx: ^2.2.0+2
-  mobx_codegen: ^2.6.0+1  # Change this line
+  mobx_codegen: ^2.6.0+1  #build.gradle Change this line
   image_picker: ^1.0.7
   permission_handler: ^11.3.0
-  intl: ^0.17.0
-
+  intl: ^0.19.0
+  excel: ^4.0.2
+  file_picker: ^6.1.1
+  filesystem_picker: ^4.0.0
+  cloud_firestore: ^4.14.0  # Use the latest version
+  firebase_core: ^2.24.2  # Substitua 1.10.0 pela versão mais recente disponível
+  firebase_database: ^10.4.0  # Substitua 4.1.1 pela versão mais recente disponível
+    # Adicione outras dependências conforme necessário
+  firebase_storage: ^11.6.0
+  firebase_app_check: ^0.2.1+14
+  cached_network_image: ^3.3.1
 
 dev_dependencies:
   flutter_test:
@@ -31,10 +37,13 @@ dev_dependencies:
   build_runner: ^2.1.4
   json_annotation: ^4.0.1
   json_serializable: ^6.7.1
-
-
 flutter:
   uses-material-design: true
   assets:
     - lib/stores/
     - assets/logo_cedrinho.jpg
+    - assets/acesso.jpg
+    - assets/icons/adicionar-simbolo-do-usuario.png
+    - assets/icons/comparecimento.png
+    - assets/icons/membro-da-equipe.png
+    - assets/icons/visualizar.png

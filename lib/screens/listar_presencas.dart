@@ -1,141 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:intl/intl.dart';
-import 'package:contador/data/database_helper.dart';
-import 'package:contador/models/presenca.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:contador/models/membro.dart';
-
-class ListarPresencas extends StatefulWidget {
-  @override
-  _ListarPresencasState createState() => _ListarPresencasState();
-}
-
-class _ListarPresencasState extends State<ListarPresencas> {
-  final DatabaseHelper _databaseHelper = DatabaseHelper.instance;
-
-  List<Attendance> presencas = [];
-  List<int> uniqueMemberIds = [];
-  List<DateTime> uniqueDates = [];
-  Map<int, String> memberNames = {}; // Mapa para armazenar os nomes dos membros
-
-  @override
-  void initState() {
-    super.initState();
-    _carregarPresencas();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Lista de Presenças'),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.refresh),
-            onPressed: () {
-              _carregarPresencas();
-            },
-          ),
-        ],
-      ),
-      body: presencas.isEmpty
-          ? Center(child: Text('Nenhuma presença encontrada.'))
-          : _buildPresencasTable(),
-    );
-  }
-
-  Widget _buildPresencasTable() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: DataTable(
-        columns: _buildTableColumns(),
-        rows: _buildTableRows(uniqueMemberIds),
-      ),
-    );
-  }
-
-  List<DataColumn> _buildTableColumns() {
-    Set<DateTime> uniqueDatesSet = Set(); // Usando um conjunto para garantir datas únicas
-    List<DataColumn> columns = [];
-
-    columns.add(DataColumn(label: Text('MEMBRO')));
-    columns.add(DataColumn(label: Text('PORCENTAGEM')));
-
-    for (var date in uniqueDates) {
-      if (uniqueDatesSet.add(date)) {
-        // Se a data não estiver no conjunto, adicione à lista de colunas
-        if (date == DateTime.now() && columns.any((column) => column.label == Text(DateFormat('dd/MM/yyyy').format(date)))) {
-          // Verifique se a coluna para a data atual já existe
-          continue;
-        }
-
-        columns.add(DataColumn(label: Text(DateFormat('dd/MM/yyyy').format(date))));
-      }
-    }
-
-    return columns;
-  }
-
-  List<DataRow> _buildTableRows(List<int> memberIds) {
-    return memberIds.map((memberId) {
-      return DataRow(
-        cells: [
-          DataCell(Text(memberNames[memberId] ?? '')), // Usar o nome do membro
-          DataCell(_buildPorcentagemPresenca(memberId)), // Adicionar porcentagem de presença
-          for (var date in uniqueDates)
-            if (date != DateTime.now()) // Excluir a data de hoje da exibição
-              DataCell(
-                FutureBuilder<bool>(
-                  future: _checkAttendance(memberId, date),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      // Se ainda estiver carregando, você pode exibir um indicador de carregamento
-                      return CircularProgressIndicator();
-                    } else if (snapshot.hasError) {
-                      // Se ocorrer um erro durante a verificação, você pode tratar aqui
-                      return Text('Erro ao verificar presença');
-                    } else {
-                      // Verifique o resultado e exiba o marcador apropriado
-                      bool isPresent = snapshot.data ?? false;
-                      return Text(
-                        isPresent ? '✓' : 'X',
-                        style: TextStyle(fontSize: 24, color: isPresent ? Colors.black : Colors.red),
-                      );
-                    }
-                  },
-                ),
-              ),
-        ],
-      );
-    }).toList();
-  }
-
-  Widget _buildPorcentagemPresenca(int memberId) {
-    int totalDias = uniqueDates.length;
-    int presencasMembro = presencas.where((p) => p.memberId == memberId).length;
-
-    double porcentagem = (presencasMembro / totalDias) * 100;
-
-    return Text('${porcentagem.toStringAsFixed(2)}%');
-  }
-
-  Future<bool> _checkAttendance(int memberId, DateTime date) async {
-    return await _databaseHelper.checkAttendanceExists(memberId, date);
-  }
-
-  void _carregarPresencas() async {
-    uniqueDates = await _databaseHelper.queryAllAttendanceDates();
-    List<Attendance> listaPresencas = await _databaseHelper.queryAllAttendances();
-
-    // Obter nomes dos membros
-    List<Membro> membros = await _databaseHelper.queryAllMembers();
-    memberNames = Map.fromIterable(membros, key: (membro) => membro.id, value: (membro) => membro.nome);
-
-    setState(() {
-      presencas = listaPresencas;
-      uniqueMemberIds = presencas.map((p) => p.memberId).toSet().toList();
-    });
-  }
-}
+import 'package:contador/models/presenca.dart';
+import 'dart:io';
 
 void main() {
   runApp(MyApp());
@@ -147,5 +16,199 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       home: ListarPresencas(),
     );
+  }
+}
+
+class ListarPresencas extends StatefulWidget {
+  @override
+  _ListarPresencasState createState() => _ListarPresencasState();
+}
+
+class _ListarPresencasState extends State<ListarPresencas> {
+  final DatabaseReference _presencasReference =
+  FirebaseDatabase.instance.reference().child('presencas');
+
+  List<String> datas = [];
+  List<Membro> membros = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarDatasPresencas();
+    _carregarMembros();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Listar Presenças'),
+      ),
+      body: SingleChildScrollView(
+        scrollDirection: Axis.vertical,
+        child: SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: _buildMatrizPresencas(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMatrizPresencas() {
+    return DataTable(
+      columns: [
+        DataColumn(label: Text('Nome')),
+        DataColumn(label: Text('Porcentagem')),
+        ...datas.map((data) => DataColumn(label: Text(data))),
+      ],
+      rows: membros.map((membro) {
+        return DataRow(
+          cells: [
+            DataCell(Text(membro.nome)),
+            DataCell(
+              FutureBuilder<double>(
+                future: _calcularPorcentagemPresenca(membro.id ?? ''),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return CircularProgressIndicator();
+                  } else if (snapshot.hasError) {
+                    return Text('Erro ao calcular porcentagem');
+                  } else {
+                    double porcentagem = snapshot.data ?? 0.0;
+                    return Text('${porcentagem.toStringAsFixed(2)}%');
+                  }
+                },
+              ),
+            ),
+            ...datas.map((data) {
+              return DataCell(
+                FutureBuilder<bool>(
+                  future: _verificarPresenca(membro.id ?? '', data ?? ''),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return CircularProgressIndicator();
+                    } else if (snapshot.hasError) {
+                      return Text('Erro ao verificar presença');
+                    } else {
+                      bool presente = snapshot.data ?? false;
+                      return Text(
+                        presente ? '✓' : 'X',
+                        style: TextStyle(
+                          fontSize: 24,
+                          color: presente ? Colors.black : Colors.red,
+                        ),
+                      );
+                    }
+                  },
+                ),
+              );
+            }),
+          ],
+        );
+      }).toList(),
+    );
+  }
+
+  Future<void> _carregarDatasPresencas() async {
+    try {
+      DatabaseEvent event = await _presencasReference.once();
+      DataSnapshot snapshot = event.snapshot;
+
+      if (snapshot.value != null) {
+        Map<dynamic, dynamic>? values =
+        snapshot.value as Map<dynamic, dynamic>?;
+
+        if (values != null) {
+          List<String> datasPresencas = [];
+
+          values.forEach((key, value) {
+            datasPresencas.add(key);
+          });
+
+          setState(() {
+            datas = datasPresencas;
+          });
+        }
+      }
+    } catch (error) {
+      print('Erro ao carregar datas de presenças: $error');
+    }
+  }
+
+  Future<void> _carregarMembros() async {
+    try {
+      DatabaseEvent event =
+      await FirebaseDatabase.instance.reference().child('membros').once();
+      DataSnapshot snapshot = event.snapshot;
+
+      if (snapshot.value != null) {
+        Map<dynamic, dynamic>? values =
+        snapshot.value as Map<dynamic, dynamic>?;
+
+        if (values != null) {
+          List<Membro> listaMembros = [];
+
+          values.forEach((key, value) {
+            listaMembros.add(
+              Membro(
+                id: key,
+                nome: value['nome'],
+                dataAniversario: value['dataAniversario'] != null
+                    ? DateTime.parse(value['dataAniversario'])
+                    : null,
+                tipoMembro: value['tipoMembro'],
+                endereco: value['endereco'],
+              ),
+            );
+          });
+
+          setState(() {
+            membros = listaMembros;
+          });
+        }
+      }
+    } catch (error) {
+      print('Erro ao carregar membros: $error');
+    }
+  }
+
+  Future<double> _calcularPorcentagemPresenca(String memberId) async {
+    int presencasTotais = 0;
+
+    for (String data in datas) {
+      bool presente = await _verificarPresenca(memberId, data);
+      if (presente) {
+        presencasTotais++;
+      }
+    }
+
+    double porcentagem = (presencasTotais / datas.length) * 100;
+    return porcentagem;
+  }
+
+  Future<bool> _verificarPresenca(String memberId, String? date) async {
+    try {
+      DatabaseEvent event =
+      await _presencasReference.child(date ?? '').once();
+      DataSnapshot snapshot = event.snapshot;
+
+      if (snapshot.value is Map) {
+        Map<dynamic, dynamic> values =
+        snapshot.value as Map<dynamic, dynamic>;
+
+        // Verifica se a data existe nos valores
+        if (values.containsKey('members')) {
+          List<dynamic>? membersPresentes =
+          values['members'] as List<dynamic>?;
+
+          // Verifica se o memberId está na lista de membros presentes
+          return membersPresentes?.contains(memberId) ?? false;
+        }
+      }
+    } catch (error) {
+      print('Erro ao verificar presença: $error');
+    }
+
+    return false;
   }
 }

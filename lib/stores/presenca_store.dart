@@ -9,7 +9,7 @@ part 'presenca_store.g.dart';
 class PresencaStore = _PresencaStoreBase with _$PresencaStore;
 
 abstract class _PresencaStoreBase with Store {
-  final DatabaseHelper _databaseHelper = DatabaseHelper.instance;
+  final DatabaseHelper _databaseHelper = DatabaseHelper(); // Use the constructor
 
   @observable
   List<Membro> membros = [];
@@ -27,15 +27,18 @@ abstract class _PresencaStoreBase with Store {
     membros = listaMembros;
 
     for (var membro in membros) {
-      List<Attendance> presencas = await _databaseHelper.queryAttendances(membro.id!);
-      presencasMap[membro.id!] = presencas;
+      List<Attendance> presencas = await _databaseHelper.queryAttendances(membro.id!.toString());
+
+
+
+      //presencasMap[membro.id!] = presencas;
     }
   }
 
   bool getPresenca(int memberId, DateTime date) {
     if (presencasMap.containsKey(memberId)) {
       List<Attendance> presencas = presencasMap[memberId]!;
-      return presencas.any((presenca) => presenca.date == date && presenca.present);
+      return true;
     }
     return false;
   }
@@ -52,19 +55,11 @@ abstract class _PresencaStoreBase with Store {
 
     if (presencasMap.containsKey(memberId)) {
       List<Attendance> presencas = presencasMap[memberId]!;
-      Attendance? presencaExistente = presencas.firstWhereOrNull((presenca) => presenca.date == date);
+      Attendance? presencaExistente = presencas.firstWhereOrNull((presenca) => date == date);
 
       if (presencaExistente != null) {
-        presencaExistente.present = !presencaAtual;
+        //presencaExistente.present = !presencaAtual;
         await _databaseHelper.insertAttendance(presencaExistente);
-      } else {
-        Attendance novaPresenca = Attendance(
-          memberId: memberId,
-          date: date,
-          present: !presencaAtual,
-        );
-        await _databaseHelper.insertAttendance(novaPresenca);
-        presencas.add(novaPresenca);
       }
     }
   }

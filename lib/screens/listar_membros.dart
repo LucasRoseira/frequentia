@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:contador/data/database_helper.dart';
 import 'package:contador/models/membro.dart';
-import 'dart:io';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:contador/screens/cadastrar_membro.dart';
 
 class ListarMembros extends StatefulWidget {
   @override
@@ -9,7 +9,8 @@ class ListarMembros extends StatefulWidget {
 }
 
 class _ListarMembrosState extends State<ListarMembros> {
-  final DatabaseHelper _databaseHelper = DatabaseHelper.instance;
+  final DatabaseReference _databaseReference =
+  FirebaseDatabase.instance.reference().child('membros');
   List<Membro> membros = [];
 
   @override
@@ -28,24 +29,21 @@ class _ListarMembrosState extends State<ListarMembros> {
         children: [
           Padding(
             padding: const EdgeInsets.all(8.0),
-            child: Text(
-              'Nomes dos Membros',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
           ),
           Expanded(
             child: ListView.builder(
               itemCount: membros.length,
               itemBuilder: (context, index) {
                 return ListTile(
-                  title: Row(
+                  title: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       _buildFotoMembro(membros[index].foto),
-                      SizedBox(width: 16),
-                      Text(membros[index].nome),
+                      SizedBox(height: 8),
+                      Text('Nome: ${membros[index].nome}'),
+                      Text('Data de Aniversário: ${membros[index].dataAniversario?.toLocal()}'),
+                      Text('Tipo de Membro: ${membros[index].tipoMembro}'),
+                      Text('Endereço: ${membros[index].endereco}'),
                     ],
                   ),
                   trailing: Row(
@@ -71,24 +69,62 @@ class _ListarMembrosState extends State<ListarMembros> {
           ),
         ],
       ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: _openCadastroMembros,
+        tooltip: 'Cadastrar Membros',
+        child: Icon(Icons.add),
+      ),
     );
   }
 
   Widget _buildFotoMembro(String? fotoPath) {
     return CircleAvatar(
-      radius: 20,
-      backgroundImage: fotoPath != null ? FileImage(File(fotoPath)) : null,
+      radius: 30,
+      backgroundImage: fotoPath != null
+          ? NetworkImage(fotoPath)
+          : AssetImage('assets/placeholder_image.png') as ImageProvider<Object>,
       child: fotoPath == null
-          ? Icon(Icons.person, size: 40, color: Colors.white)
+          ? Icon(Icons.person, size: 60, color: Colors.white)
           : null,
     );
   }
 
-  void _carregarMembros() async {
-    List<Membro> listaMembros = await _databaseHelper.queryAllMembers();
-    setState(() {
-      membros = listaMembros;
-    });
+
+  Future<void> _carregarMembros() async {
+    try {
+      DatabaseEvent event = await _databaseReference.once();
+      DataSnapshot snapshot = event.snapshot;
+
+      if (snapshot.value != null) {
+        Map<dynamic, dynamic>? values =
+        snapshot.value as Map<dynamic, dynamic>?;
+
+        if (values != null) {
+          List<Membro> listaMembros = [];
+
+          values.forEach((key, value) {
+            listaMembros.add(
+              Membro(
+                id: key,
+                nome: value['nome'],
+                foto: value['foto'],
+                dataAniversario: value['dataAniversario'] != null
+                    ? DateTime.parse(value['dataAniversario'])
+                    : null,
+                tipoMembro: value['tipoMembro'],
+                endereco: value['endereco'],
+              ),
+            );
+          });
+
+          setState(() {
+            membros = listaMembros;
+          });
+        }
+      }
+    } catch (error) {
+      print('Erro ao carregar membros: $error');
+    }
   }
 
   void _editarMembro(Membro membro) {
@@ -104,9 +140,21 @@ class _ListarMembrosState extends State<ListarMembros> {
     });
   }
 
-  void _excluirMembro(Membro membro) async {
-    await _databaseHelper.deleteMember(membro.id ?? 0);
-    _carregarMembros();
+  void _excluirMembro(Membro membro) {
+    _databaseReference.child(membro.id!).remove().then((_) {
+      _carregarMembros();
+    });
+  }
+
+  void _openCadastroMembros() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => CadastrarMembro()),
+    ).then((result) {
+      if (result != null && result) {
+        _carregarMembros();
+      }
+    });
   }
 }
 
@@ -121,11 +169,23 @@ class EditarMembroScreen extends StatefulWidget {
 
 class _EditarMembroScreenState extends State<EditarMembroScreen> {
   late TextEditingController _nomeController;
+  late TextEditingController _dataAniversarioController;
+  late TextEditingController _tipoMembroController;
+  late TextEditingController _enderecoController;
+  late TextEditingController _fotoController;
 
   @override
   void initState() {
     super.initState();
     _nomeController = TextEditingController(text: widget.membro.nome);
+    _dataAniversarioController = TextEditingController(
+        text: widget.membro.dataAniversario?.toString() ?? '');
+    _tipoMembroController =
+        TextEditingController(text: widget.membro.tipoMembro ?? '');
+    _enderecoController =
+        TextEditingController(text: widget.membro.endereco ?? '');
+    _fotoController =
+        TextEditingController(text: widget.membro.foto ?? '');
   }
 
   @override
@@ -139,8 +199,11 @@ class _EditarMembroScreenState extends State<EditarMembroScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _buildFotoField(),
             _buildNomeField(),
+            _buildDataAniversarioField(),
+            _buildTipoMembroField(),
+            _buildEnderecoField(),
+            _buildFotoField(),
             ElevatedButton(
               onPressed: () {
                 _salvarAlteracoes();
@@ -153,10 +216,6 @@ class _EditarMembroScreenState extends State<EditarMembroScreen> {
     );
   }
 
-  Widget _buildFotoField() {
-    return Container(); // Adicione um campo para a foto, se necessário
-  }
-
   Widget _buildNomeField() {
     return TextFormField(
       controller: _nomeController,
@@ -164,16 +223,54 @@ class _EditarMembroScreenState extends State<EditarMembroScreen> {
     );
   }
 
+  Widget _buildDataAniversarioField() {
+    return TextFormField(
+      controller: _dataAniversarioController,
+      decoration: InputDecoration(labelText: 'Data de Aniversário'),
+    );
+  }
+
+  Widget _buildTipoMembroField() {
+    return TextFormField(
+      controller: _tipoMembroController,
+      decoration: InputDecoration(labelText: 'Tipo de Membro'),
+    );
+  }
+
+  Widget _buildEnderecoField() {
+    return TextFormField(
+      controller: _enderecoController,
+      decoration: InputDecoration(labelText: 'Endereço'),
+    );
+  }
+
+  Widget _buildFotoField() {
+    return TextFormField(
+      controller: _fotoController,
+      decoration: InputDecoration(labelText: 'Caminho da Foto'),
+    );
+  }
+
   void _salvarAlteracoes() async {
     String novoNome = _nomeController.text;
+    String novaDataAniversario = _dataAniversarioController.text;
+    String novoTipoMembro = _tipoMembroController.text;
+    String novoEndereco = _enderecoController.text;
+    String novoCaminhoFoto = _fotoController.text;
 
     Membro membroAtualizado = Membro(
       id: widget.membro.id,
       nome: novoNome,
-      foto: widget.membro.foto,
+      dataAniversario: novaDataAniversario.isNotEmpty
+          ? DateTime.tryParse(novaDataAniversario)
+          : null,
+      tipoMembro: novoTipoMembro,
+      endereco: novoEndereco,
+      foto: novoCaminhoFoto.isNotEmpty ? novoCaminhoFoto : null,
     );
 
-    await DatabaseHelper.instance.updateMember(membroAtualizado);
+    // Implemente a lógica de atualização no banco de dados (Firebase ou outro)
+    // Exemplo fictício: await _databaseReference.child(widget.membro.id!).update({...});
 
     Navigator.pop(context, true);
   }
@@ -181,6 +278,10 @@ class _EditarMembroScreenState extends State<EditarMembroScreen> {
   @override
   void dispose() {
     _nomeController.dispose();
+    _dataAniversarioController.dispose();
+    _tipoMembroController.dispose();
+    _enderecoController.dispose();
+    _fotoController.dispose();
     super.dispose();
   }
 }
