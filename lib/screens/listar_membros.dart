@@ -13,6 +13,8 @@ class _ListarMembrosState extends State<ListarMembros> {
   final DatabaseReference _databaseReference =
   FirebaseDatabase.instance.reference().child('membros');
   List<Membro> membros = [];
+  List<Membro> membrosFiltrados = [];
+  TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
@@ -32,24 +34,46 @@ class _ListarMembrosState extends State<ListarMembros> {
         if (values != null) {
           List<Membro> listaMembros = [];
 
-          values.forEach((key, value) {
-            listaMembros.add(
-              Membro(
-                id: key,
-                nome: value['nome'],
-              ),
-            );
-          });
+          for (var entry in values.entries) {
+            var key = entry.key;
+            var value = entry.value;
+
+            try {
+              DatabaseEvent event =
+              await _databaseReference.child(key).once();
+              DataSnapshot snapshot = event.snapshot;
+
+              if (snapshot.value != null) {
+                Map<dynamic, dynamic>? data =
+                snapshot.value as Map<dynamic, dynamic>?;
+
+                if (data != null) {
+                  listaMembros.add(
+                    Membro(
+                      id: key,
+                      nome: value['nome'],
+                      foto: data['foto'],
+                      dataAniversario: data['dataAniversario'] != null
+                          ? DateTime.parse(data['dataAniversario'])
+                          : null,
+                      tipoMembro: data['tipoMembro'],
+                      endereco: data['endereco'],
+                    ),
+                  );
+                }
+              }
+            } catch (error) {
+              print('Erro ao carregar dados do membro: $error');
+            }
+          }
 
           // Ordena os membros pelo nome
           listaMembros.sort((a, b) => a.nome.compareTo(b.nome));
 
           setState(() {
             membros = listaMembros;
+            membrosFiltrados = membros; // Inicializa membrosFiltrados com todos os membros
           });
-
-          // Agora, carregamos os dados restantes usando os IDs ordenados
-          _carregarDadosCompletos();
         }
       }
     } catch (error) {
@@ -90,9 +114,21 @@ class _ListarMembrosState extends State<ListarMembros> {
       }
     }
 
-    // Atualiza o estado com os membros completos
+    // Atualiza o estado adicionando membrosCompletos à lista existente
     setState(() {
-      membros = membrosCompletos;
+      membros.addAll(membrosCompletos);
+      membrosFiltrados = membros; // Atualiza membrosFiltrados após carregar os dados completos
+    });
+  }
+
+
+  // Atualiza o método _filtrarMembros para filtrar membrosFiltrados
+  void _filtrarMembros(String query) {
+    setState(() {
+      membrosFiltrados = membros
+          .where((membro) =>
+          membro.nome.toLowerCase().contains(query.toLowerCase()))
+          .toList();
     });
   }
 
@@ -106,16 +142,36 @@ class _ListarMembrosState extends State<ListarMembros> {
         children: [
           Padding(
             padding: const EdgeInsets.all(8.0),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _searchController,
+                    onChanged: _filtrarMembros,
+                    decoration: InputDecoration(
+                      labelText: 'Pesquisar Membro',
+                      prefixIcon: Icon(Icons.search),
+                    ),
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.search),
+                  onPressed: () {
+                    _filtrarMembros(_searchController.text);
+                  },
+                ),
+              ],
+            ),
           ),
           Expanded(
             child: ListView.builder(
-              itemCount: membros.length,
+              itemCount: membrosFiltrados.length,
               itemBuilder: (context, index) {
                 return ListTile(
                   title: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _buildFotoMembro(membros[index].foto),
+                      _buildFotoMembro(membrosFiltrados[index].foto),
                       SizedBox(height: 8),
                       RichText(
                         text: TextSpan(
@@ -125,7 +181,7 @@ class _ListarMembrosState extends State<ListarMembros> {
                               text: 'Nome: ',
                               style: TextStyle(fontWeight: FontWeight.bold),
                             ),
-                            TextSpan(text: '${membros[index].nome}'),
+                            TextSpan(text: '${membrosFiltrados[index].nome}'),
                           ],
                         ),
                       ),
@@ -138,7 +194,8 @@ class _ListarMembrosState extends State<ListarMembros> {
                               style: TextStyle(fontWeight: FontWeight.bold),
                             ),
                             TextSpan(
-                              text: '${_formatDate(membros[index].dataAniversario)}',
+                              text:
+                              '${_formatDate(membrosFiltrados[index].dataAniversario)}',
                             ),
                           ],
                         ),
@@ -151,7 +208,8 @@ class _ListarMembrosState extends State<ListarMembros> {
                               text: 'Tipo de Membro: ',
                               style: TextStyle(fontWeight: FontWeight.bold),
                             ),
-                            TextSpan(text: '${membros[index].tipoMembro}'),
+                            TextSpan(
+                                text: '${membrosFiltrados[index].tipoMembro}'),
                           ],
                         ),
                       ),
@@ -163,7 +221,7 @@ class _ListarMembrosState extends State<ListarMembros> {
                               text: 'Endereço: ',
                               style: TextStyle(fontWeight: FontWeight.bold),
                             ),
-                            TextSpan(text: '${membros[index].endereco}'),
+                            TextSpan(text: '${membrosFiltrados[index].endereco}'),
                           ],
                         ),
                       ),
@@ -175,13 +233,13 @@ class _ListarMembrosState extends State<ListarMembros> {
                       IconButton(
                         icon: Icon(Icons.edit),
                         onPressed: () {
-                          _editarMembro(membros[index]);
+                          _editarMembro(membrosFiltrados[index]);
                         },
                       ),
                       IconButton(
                         icon: Icon(Icons.delete, color: Colors.red),
                         onPressed: () {
-                          _excluirMembro(membros[index]);
+                          _excluirMembro(membrosFiltrados[index]);
                         },
                       ),
                     ],
@@ -236,8 +294,9 @@ class _ListarMembrosState extends State<ListarMembros> {
       await _databaseReference.child(membro.id!).remove();
 
       // Remove the associated presence records
-      DataSnapshot snapshot = await _databaseReference.once().then((event) => event.snapshot);
-
+      DataSnapshot snapshot = await _databaseReference
+          .once()
+          .then((event) => event.snapshot);
 
       if (snapshot.value != null) {
         Map<dynamic, dynamic> presences =
@@ -255,10 +314,6 @@ class _ListarMembrosState extends State<ListarMembros> {
     }
   }
 
-
-
-
-
   void _openCadastroMembros() {
     Navigator.push(
       context,
@@ -273,7 +328,6 @@ class _ListarMembrosState extends State<ListarMembros> {
   String _formatDate(DateTime? date) {
     return date != null ? DateFormat('yyyy-MM-ddd').format(date) : '';
   }
-
 }
 
 class EditarMembroScreen extends StatefulWidget {
@@ -287,7 +341,6 @@ class EditarMembroScreen extends StatefulWidget {
 }
 
 class _EditarMembroScreenState extends State<EditarMembroScreen> {
-
   String _formatDate(DateTime? date) {
     return date != null ? DateFormat('dd/MM/yyyy').format(date) : '';
   }
@@ -378,7 +431,8 @@ class _EditarMembroScreenState extends State<EditarMembroScreen> {
       lastDate: DateTime(2101),
     );
 
-    if (dataSelecionada != null && dataSelecionada != widget.membro.dataAniversario) {
+    if (dataSelecionada != null &&
+        dataSelecionada != widget.membro.dataAniversario) {
       setState(() {
         widget.membro.dataAniversario = dataSelecionada;
         _dataAniversarioController.text = _formatDate(dataSelecionada);
@@ -430,13 +484,16 @@ class _EditarMembroScreenState extends State<EditarMembroScreen> {
       Map<String, dynamic> updates = {
         'nome': membroAtualizado.nome,
         if (membroAtualizado.dataAniversario != null)
-          'dataAniversario': membroAtualizado.dataAniversario?.toIso8601String(),
+          'dataAniversario':
+          membroAtualizado.dataAniversario?.toIso8601String(),
         'tipoMembro': membroAtualizado.tipoMembro,
         'endereco': membroAtualizado.endereco,
         if (membroAtualizado.foto != null) 'foto': membroAtualizado.foto,
       };
 
-      await widget.databaseReference.child(widget.membro.id!).update(updates);
+      await widget.databaseReference
+          .child(widget.membro.id!)
+          .update(updates);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -456,7 +513,6 @@ class _EditarMembroScreenState extends State<EditarMembroScreen> {
       );
     }
   }
-
 
   @override
   void dispose() {

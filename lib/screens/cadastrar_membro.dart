@@ -43,7 +43,7 @@ class _CadastrarMembroState extends State<CadastrarMembro> {
           padding: const EdgeInsets.all(16.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.stretch, // Para ocupar a largura total
             children: [
               TextField(
                 controller: _nomeController,
@@ -110,6 +110,9 @@ class _CadastrarMembroState extends State<CadastrarMembro> {
                 },
                 child: Text('Escolher Foto'),
                 style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.zero,
+                  ),
                   minimumSize: Size(double.infinity, 40),
                 ),
               ),
@@ -120,6 +123,9 @@ class _CadastrarMembroState extends State<CadastrarMembro> {
                 },
                 child: Text('Cadastrar'),
                 style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.zero,
+                  ),
                   minimumSize: Size(double.infinity, 40),
                 ),
               ),
@@ -130,6 +136,9 @@ class _CadastrarMembroState extends State<CadastrarMembro> {
                 },
                 child: Text('Exibir Valores'),
                 style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.zero,
+                  ),
                   minimumSize: Size(double.infinity, 40),
                 ),
               ),
@@ -139,6 +148,11 @@ class _CadastrarMembroState extends State<CadastrarMembro> {
       ),
     );
   }
+
+
+
+
+
 
   Future<void> _mostrarDatePicker(BuildContext context) async {
     final pickedDate = await showDatePicker(

@@ -24,8 +24,9 @@ class CadastroPresenca extends StatefulWidget {
 class _CadastroPresencaState extends State<CadastroPresenca> {
   final DatabaseReference _databaseReference =
   FirebaseDatabase.instance.reference().child('membros');
+  final DatabaseReference _presencasReference =
+  FirebaseDatabase.instance.reference().child('presencas');
   List<Membro> membros = [];
-  List<Membro> membrosFiltrados = [];
   Map<String, bool> presencas = {};
   DateTime currentDate = DateTime.now();
 
@@ -33,6 +34,39 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
   void initState() {
     super.initState();
     _carregarMembros();
+    _carregarPresencas(_formatDate(currentDate));
+  }
+
+  Future<bool> _verificarPresencaCadastro(
+      String memberId, String formattedDate) async {
+    try {
+      DatabaseEvent event =
+      await _presencasReference.child(formattedDate).once();
+      DataSnapshot snapshot = event.snapshot;
+
+      if (snapshot.value is Map) {
+        Map<dynamic, dynamic> values = snapshot.value as Map<dynamic, dynamic>;
+
+        // Verifica se a data existe nos valores
+        if (values.containsKey('members')) {
+          List<dynamic>? membersPresentes =
+          values['members'] as List<dynamic>?;
+
+          // Verifica se o memberId está na lista de membros presentes
+          bool hasAttendance =
+              membersPresentes?.contains(memberId) ?? false;
+
+          print(
+              'Verificar Presença - Membro: $memberId, Data: $formattedDate, Presente: $hasAttendance');
+
+          return hasAttendance;
+        }
+      }
+    } catch (error) {
+      print('Erro ao verificar presença: $error');
+    }
+
+    return false;
   }
 
   @override
@@ -68,7 +102,8 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
               itemCount: membros.length,
               itemBuilder: (context, index) {
                 return ListTile(
-                  contentPadding: EdgeInsets.symmetric(vertical: 4, horizontal: 16), // Ajusta o espaçamento
+                  contentPadding:
+                  EdgeInsets.symmetric(vertical: 4, horizontal: 16),
                   title: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -76,9 +111,13 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
                       Checkbox(
                         value: presencas[membros[index].id] ?? false,
                         onChanged: (value) {
-                          setState(() {
-                            presencas[membros[index].id!] = value!;
-                          });
+                          if (membros[index].id != null) {
+                            _atualizarPresenca(
+                              membros[index].id!,
+                              _formatDate(currentDate),
+                              value ?? false,
+                            );
+                          }
                         },
                       ),
                     ],
@@ -97,21 +136,29 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
         child: Icon(Icons.calendar_today),
       ),
       persistentFooterButtons: [
-        ElevatedButton(
-          onPressed: () {
-            _salvarPresencas();
-          },
-          child: Text('Salvar Presenças'),
+        Container(
+          width: double.infinity,
+          child: ElevatedButton(
+            onPressed: () {
+              _salvarPresencas();
+            },
+            style: ElevatedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.zero,
+              ),
+            ),
+            child: Text('Salvar Presenças'),
+          ),
         ),
       ],
-      floatingActionButtonLocation: FloatingActionButtonLocation.endTop, // Muda a posição do FAB para o topo
+      floatingActionButtonLocation: FloatingActionButtonLocation.endTop,
     );
   }
 
+
   Future<void> _carregarMembros() async {
     try {
-      DatabaseEvent event =
-      await FirebaseDatabase.instance.reference().child('membros').once();
+      DatabaseEvent event = await _databaseReference.once();
       DataSnapshot snapshot = event.snapshot;
 
       if (snapshot.value != null) {
@@ -135,12 +182,15 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
             );
           });
 
-          listaMembros.sort((a, b) =>
-              a.nome.compareTo(b.nome)); // Ordena os membros alfabeticamente
+          listaMembros.sort((a, b) => a.nome.compareTo(b.nome));
 
           setState(() {
             membros = listaMembros;
-            membrosFiltrados = membros;
+
+            // Carregar presenças para cada membro
+            membros.forEach((membro) {
+              _carregarPresencasMembro(membro.id!);
+            });
           });
         }
       }
@@ -149,13 +199,91 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
     }
   }
 
-  void _filtrarMembros(String nome) {
-    setState(() {
-      membrosFiltrados = membros
-          .where((membro) =>
-          membro.nome.toLowerCase().contains(nome.toLowerCase()))
-          .toList();
-    });
+  Future<void> _carregarPresencas(String formattedDate) async {
+    try {
+      DatabaseEvent event =
+      await _presencasReference.child(formattedDate).once();
+      DataSnapshot snapshot = event.snapshot;
+
+      if (snapshot.value is Map) {
+        Map<dynamic, dynamic> values = snapshot.value as Map<dynamic, dynamic>;
+
+        Map<String, bool> loadedPresencas = {};
+
+        membros.forEach((membro) {
+          String memberId = membro.id ?? '';
+          bool hasAttendance = values['members']?.contains(memberId) ?? false;
+
+          print('Membro: $memberId, Tem Presença: $hasAttendance');
+
+          loadedPresencas[memberId] = hasAttendance;
+        });
+
+        print('Presenças carregadas: $loadedPresencas');
+
+        // Atualizar presenças uma vez após o loop
+        setState(() {
+          presencas = loadedPresencas;
+        });
+
+        print('Presenças no estado após atualização: $presencas');
+      } else {
+        // Se não houver presenças para a data, definir todos os checkboxes como falso
+        Map<String, bool> emptyPresencas = {};
+        membros.forEach((membro) {
+          emptyPresencas[membro.id ?? ''] = false;
+        });
+
+        setState(() {
+          presencas = emptyPresencas;
+        });
+
+        print(
+            'Nenhuma presença para a data. Presenças definidas como falsas: $presencas');
+      }
+    } catch (error) {
+      print('Erro ao carregar presenças: $error');
+    }
+  }
+
+  Future<void> _atualizarPresenca(
+      String memberId, String formattedDate, bool value) async {
+    try {
+      bool hasAttendance =
+      await _verificarPresencaCadastro(memberId, formattedDate);
+
+      // Se o estado atual for diferente do valor desejado, atualize
+      if (hasAttendance != value) {
+        setState(() {
+          presencas[memberId] = value;
+        });
+      }
+    } catch (error) {
+      print('Erro ao atualizar presença: $error');
+    }
+  }
+
+  Future<void> _carregarPresencasMembro(String memberId) async {
+    try {
+      String formattedDate = _formatDate(currentDate);
+
+      DatabaseEvent event =
+      await _presencasReference.child(formattedDate).once();
+      DataSnapshot snapshot = event.snapshot;
+
+      if (snapshot.value is Map) {
+        Map<dynamic, dynamic> values = snapshot.value as Map<dynamic, dynamic>;
+
+        bool hasAttendance = values['members']?.contains(memberId) ?? false;
+
+        // Atualizar presença do membro específico
+        setState(() {
+          presencas[memberId] = hasAttendance;
+        });
+      }
+    } catch (error) {
+      print('Erro ao carregar presenças do membro: $error');
+    }
   }
 
   Future<void> _salvarPresencas() async {
@@ -168,15 +296,9 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
         }
       }
 
-      DatabaseReference presencasReference =
-      FirebaseDatabase.instance.reference().child('presencas');
+      String formattedDate = _formatDate(currentDate);
 
-      // Formatando a data no formato desejado
-      String formattedDate =
-      DateFormat('dd-MM-yyyy').format(currentDate);
-
-      // Salvando as presenças no Firebase
-      await presencasReference.child(formattedDate).set({
+      await _presencasReference.child(formattedDate).set({
         'data': formattedDate,
         'members': membrosPresentes,
       });
@@ -207,6 +329,11 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
     );
 
     if (pickedDate != null && pickedDate != currentDate) {
+      String formattedDate = _formatDate(pickedDate);
+
+      // Carregar presenças e atualizar state
+      await _carregarPresencas(formattedDate);
+
       setState(() {
         currentDate = pickedDate;
       });
@@ -214,6 +341,6 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
   }
 
   String _formatDate(DateTime date) {
-    return DateFormat('dd/MM/yyyy').format(date);
+    return DateFormat('dd-MM-yyyy').format(date);
   }
 }
