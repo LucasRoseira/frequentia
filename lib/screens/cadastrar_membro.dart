@@ -7,6 +7,7 @@ import 'dart:io';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:contador/services/firebase_service.dart';
+import 'package:intl/intl.dart'; // Adicione esta importação
 
 class CadastrarMembro extends StatefulWidget {
   @override
@@ -22,7 +23,7 @@ enum TipoMembro {
 
 class _CadastrarMembroState extends State<CadastrarMembro> {
   final TextEditingController _nomeController = TextEditingController();
-  final TextEditingController _dataAniversarioController = TextEditingController();
+  DateTime? _dataAniversario;
   TipoMembro _tipoMembroSelecionado = TipoMembro.Adolescentes;
   final TextEditingController _enderecoController = TextEditingController();
   String? _fotoPath;
@@ -42,31 +43,58 @@ class _CadastrarMembroState extends State<CadastrarMembro> {
           padding: const EdgeInsets.all(16.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               TextField(
                 controller: _nomeController,
                 decoration: InputDecoration(labelText: 'Nome'),
               ),
               SizedBox(height: 16),
-              TextField(
-                controller: _dataAniversarioController,
-                decoration: InputDecoration(labelText: 'Data de Aniversário'),
+              GestureDetector(
+                onTap: () => _mostrarDatePicker(context),
+                child: AbsorbPointer(
+                  child: TextField(
+                    controller: TextEditingController(
+                        text: _dataAniversario != null
+                            ? _formatDate(_dataAniversario!)
+                            : ''),
+                    decoration:
+                    InputDecoration(labelText: 'Data de Aniversário'),
+                  ),
+                ),
               ),
               SizedBox(height: 16),
               // Adicionar o DropdownButton para o tipo de membro
-              DropdownButton<TipoMembro>(
-                value: _tipoMembroSelecionado,
-                onChanged: (TipoMembro? newValue) {
-                  setState(() {
-                    _tipoMembroSelecionado = newValue!;
-                  });
-                },
-                items: TipoMembro.values.map((TipoMembro tipo) {
-                  return DropdownMenuItem<TipoMembro>(
-                    value: tipo,
-                    child: Text(tipo.toString().split('.').last),
-                  );
-                }).toList(),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Estado Civil',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Container(
+                    width: double.infinity,
+                    child: DropdownButton<TipoMembro>(
+                      value: _tipoMembroSelecionado,
+                      onChanged: (TipoMembro? newValue) {
+                        setState(() {
+                          _tipoMembroSelecionado = newValue!;
+                        });
+                      },
+                      isExpanded: true,
+                      items: TipoMembro.values.map((TipoMembro tipo) {
+                        return DropdownMenuItem<TipoMembro>(
+                          value: tipo,
+                          child: Text(tipo.toString().split('.').last),
+                        );
+                      }).toList(),
+                    ),
+                  ),
+                ],
               ),
               SizedBox(height: 16),
               TextField(
@@ -112,6 +140,25 @@ class _CadastrarMembroState extends State<CadastrarMembro> {
     );
   }
 
+  Future<void> _mostrarDatePicker(BuildContext context) async {
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _dataAniversario ?? DateTime.now(),
+      firstDate: DateTime(1940),
+      lastDate: DateTime.now(),
+    );
+
+    if (pickedDate != null && pickedDate != _dataAniversario) {
+      setState(() {
+        _dataAniversario = pickedDate;
+      });
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    return DateFormat('dd/MM/yyyy').format(date);
+  }
+
   void _escolherFoto() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
@@ -128,7 +175,6 @@ class _CadastrarMembroState extends State<CadastrarMembro> {
 
   void _cadastrarMembro() async {
     String nome = _nomeController.text;
-    String? dataAniversario = _dataAniversarioController.text;
     String endereco = _enderecoController.text;
 
     if (nome.isNotEmpty && _fotoPath != null) {
@@ -149,7 +195,7 @@ class _CadastrarMembroState extends State<CadastrarMembro> {
       Membro novoMembro = Membro(
         nome: nome,
         foto: photoURL,
-        dataAniversario: dataAniversario != null ? DateTime.tryParse(dataAniversario) : null,
+        dataAniversario: _dataAniversario,
         tipoMembro: _tipoMembroSelecionado.toString().split('.').last,
         endereco: endereco,
       );
@@ -157,7 +203,7 @@ class _CadastrarMembroState extends State<CadastrarMembro> {
       await _firebaseService.cadastrarMembro(novoMembro);
 
       _nomeController.clear();
-      _dataAniversarioController.clear();
+      _dataAniversario = null; // Limpar a data
       _enderecoController.clear();
       _fotoPath = null;
 
@@ -166,7 +212,6 @@ class _CadastrarMembroState extends State<CadastrarMembro> {
       print('Nome e foto do membro são obrigatórios.');
     }
   }
-
 
   void _exibirValores() {
     showDialog(
@@ -178,7 +223,7 @@ class _CadastrarMembroState extends State<CadastrarMembro> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Nome: ${_nomeController.text}'),
-              Text('Data de Aniversário: ${_dataAniversarioController.text}'),
+              Text('Data de Aniversário: ${_dataAniversario != null ? _formatDate(_dataAniversario!) : ''}'),
               Text('Tipo de Membro: ${_tipoMembroSelecionado.toString().split('.').last}'),
               Text('Endereço: ${_enderecoController.text}'),
               Text('Caminho da Foto: $_fotoPath'),

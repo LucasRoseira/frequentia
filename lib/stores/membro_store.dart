@@ -7,21 +7,33 @@ part 'membro_store.g.dart';
 class MembroStore = _MembroStoreBase with _$MembroStore;
 
 abstract class _MembroStoreBase with Store {
-  final DatabaseHelper _databaseHelper = DatabaseHelper.instance;
+  final DatabaseHelper _databaseHelper;
+
+  _MembroStoreBase(DatabaseHelper databaseHelper) : _databaseHelper = databaseHelper;
 
   @observable
   ObservableList<Membro> membros = ObservableList<Membro>();
 
   @action
   Future<void> loadMembros() async {
-    membros.clear();
-    membros.addAll(await _databaseHelper.queryAllMembers());
+    try {
+      membros.clear();
+      membros.addAll(await _databaseHelper.queryAllMembers());
+    } catch (e) {
+      print('Erro ao carregar membros: $e');
+    }
   }
 
   @action
   Future<void> addMembro(String nome, String fotoPath) async {
-    // Adapte o método para lidar com o novo formato de Membro
-    await _databaseHelper.insertMember(Membro(nome: nome, foto: fotoPath));
-    await loadMembros();
+    try {
+      await _databaseHelper.insertMember(Membro(nome: nome, foto: fotoPath));
+      await loadMembros();
+    } catch (e) {
+      print('Erro ao adicionar membro: $e');
+    }
   }
+
+// Adicione abaixo os métodos para atualizar, excluir ou qualquer outra operação necessária
+// utilizando as funcionalidades do Firebase.
 }

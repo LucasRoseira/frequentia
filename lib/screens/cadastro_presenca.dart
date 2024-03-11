@@ -25,6 +25,7 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
   final DatabaseReference _databaseReference =
   FirebaseDatabase.instance.reference().child('membros');
   List<Membro> membros = [];
+  List<Membro> membrosFiltrados = [];
   Map<String, bool> presencas = {};
   DateTime currentDate = DateTime.now();
 
@@ -67,6 +68,7 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
               itemCount: membros.length,
               itemBuilder: (context, index) {
                 return ListTile(
+                  contentPadding: EdgeInsets.symmetric(vertical: 4, horizontal: 16), // Ajusta o espaçamento
                   title: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -102,12 +104,14 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
           child: Text('Salvar Presenças'),
         ),
       ],
+      floatingActionButtonLocation: FloatingActionButtonLocation.endTop, // Muda a posição do FAB para o topo
     );
   }
 
   Future<void> _carregarMembros() async {
     try {
-      DatabaseEvent event = await _databaseReference.once();
+      DatabaseEvent event =
+      await FirebaseDatabase.instance.reference().child('membros').once();
       DataSnapshot snapshot = event.snapshot;
 
       if (snapshot.value != null) {
@@ -131,14 +135,27 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
             );
           });
 
+          listaMembros.sort((a, b) =>
+              a.nome.compareTo(b.nome)); // Ordena os membros alfabeticamente
+
           setState(() {
             membros = listaMembros;
+            membrosFiltrados = membros;
           });
         }
       }
     } catch (error) {
       print('Erro ao carregar membros: $error');
     }
+  }
+
+  void _filtrarMembros(String nome) {
+    setState(() {
+      membrosFiltrados = membros
+          .where((membro) =>
+          membro.nome.toLowerCase().contains(nome.toLowerCase()))
+          .toList();
+    });
   }
 
   Future<void> _salvarPresencas() async {

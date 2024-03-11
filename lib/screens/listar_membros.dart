@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:contador/models/membro.dart';
+import 'package:intl/intl.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:contador/models/membro.dart';
 import 'package:contador/screens/cadastrar_membro.dart';
 
 class ListarMembros extends StatefulWidget {
@@ -16,7 +17,83 @@ class _ListarMembrosState extends State<ListarMembros> {
   @override
   void initState() {
     super.initState();
-    _carregarMembros();
+    _carregarNomesMembros();
+  }
+
+  Future<void> _carregarNomesMembros() async {
+    try {
+      DatabaseEvent event = await _databaseReference.once();
+      DataSnapshot snapshot = event.snapshot;
+
+      if (snapshot.value != null) {
+        Map<dynamic, dynamic>? values =
+        snapshot.value as Map<dynamic, dynamic>?;
+
+        if (values != null) {
+          List<Membro> listaMembros = [];
+
+          values.forEach((key, value) {
+            listaMembros.add(
+              Membro(
+                id: key,
+                nome: value['nome'],
+              ),
+            );
+          });
+
+          // Ordena os membros pelo nome
+          listaMembros.sort((a, b) => a.nome.compareTo(b.nome));
+
+          setState(() {
+            membros = listaMembros;
+          });
+
+          // Agora, carregamos os dados restantes usando os IDs ordenados
+          _carregarDadosCompletos();
+        }
+      }
+    } catch (error) {
+      print('Erro ao carregar membros: $error');
+    }
+  }
+
+  Future<void> _carregarDadosCompletos() async {
+    List<Membro> membrosCompletos = [];
+
+    for (Membro membro in membros) {
+      try {
+        DatabaseEvent event =
+        await _databaseReference.child(membro.id!).once();
+        DataSnapshot snapshot = event.snapshot;
+
+        if (snapshot.value != null) {
+          Map<dynamic, dynamic>? data =
+          snapshot.value as Map<dynamic, dynamic>?;
+
+          if (data != null) {
+            membrosCompletos.add(
+              Membro(
+                id: membro.id,
+                nome: membro.nome,
+                foto: data['foto'],
+                dataAniversario: data['dataAniversario'] != null
+                    ? DateTime.parse(data['dataAniversario'])
+                    : null,
+                tipoMembro: data['tipoMembro'],
+                endereco: data['endereco'],
+              ),
+            );
+          }
+        }
+      } catch (error) {
+        print('Erro ao carregar dados do membro: $error');
+      }
+    }
+
+    // Atualiza o estado com os membros completos
+    setState(() {
+      membros = membrosCompletos;
+    });
   }
 
   @override
@@ -40,10 +117,56 @@ class _ListarMembrosState extends State<ListarMembros> {
                     children: [
                       _buildFotoMembro(membros[index].foto),
                       SizedBox(height: 8),
-                      Text('Nome: ${membros[index].nome}'),
-                      Text('Data de Aniversário: ${membros[index].dataAniversario?.toLocal()}'),
-                      Text('Tipo de Membro: ${membros[index].tipoMembro}'),
-                      Text('Endereço: ${membros[index].endereco}'),
+                      RichText(
+                        text: TextSpan(
+                          style: DefaultTextStyle.of(context).style,
+                          children: [
+                            TextSpan(
+                              text: 'Nome: ',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            TextSpan(text: '${membros[index].nome}'),
+                          ],
+                        ),
+                      ),
+                      RichText(
+                        text: TextSpan(
+                          style: DefaultTextStyle.of(context).style,
+                          children: [
+                            TextSpan(
+                              text: 'Data de Aniversário: ',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            TextSpan(
+                              text: '${_formatDate(membros[index].dataAniversario)}',
+                            ),
+                          ],
+                        ),
+                      ),
+                      RichText(
+                        text: TextSpan(
+                          style: DefaultTextStyle.of(context).style,
+                          children: [
+                            TextSpan(
+                              text: 'Tipo de Membro: ',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            TextSpan(text: '${membros[index].tipoMembro}'),
+                          ],
+                        ),
+                      ),
+                      RichText(
+                        text: TextSpan(
+                          style: DefaultTextStyle.of(context).style,
+                          children: [
+                            TextSpan(
+                              text: 'Endereço: ',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            TextSpan(text: '${membros[index].endereco}'),
+                          ],
+                        ),
+                      ),
                     ],
                   ),
                   trailing: Row(
@@ -82,69 +205,59 @@ class _ListarMembrosState extends State<ListarMembros> {
       radius: 30,
       backgroundImage: fotoPath != null
           ? NetworkImage(fotoPath)
-          : AssetImage('assets/placeholder_image.png') as ImageProvider<Object>,
+          : null, // Removendo a AssetImage aqui
       child: fotoPath == null
           ? Icon(Icons.person, size: 60, color: Colors.white)
           : null,
     );
   }
 
-
-  Future<void> _carregarMembros() async {
-    try {
-      DatabaseEvent event = await _databaseReference.once();
-      DataSnapshot snapshot = event.snapshot;
-
-      if (snapshot.value != null) {
-        Map<dynamic, dynamic>? values =
-        snapshot.value as Map<dynamic, dynamic>?;
-
-        if (values != null) {
-          List<Membro> listaMembros = [];
-
-          values.forEach((key, value) {
-            listaMembros.add(
-              Membro(
-                id: key,
-                nome: value['nome'],
-                foto: value['foto'],
-                dataAniversario: value['dataAniversario'] != null
-                    ? DateTime.parse(value['dataAniversario'])
-                    : null,
-                tipoMembro: value['tipoMembro'],
-                endereco: value['endereco'],
-              ),
-            );
-          });
-
-          setState(() {
-            membros = listaMembros;
-          });
-        }
-      }
-    } catch (error) {
-      print('Erro ao carregar membros: $error');
-    }
-  }
-
   void _editarMembro(Membro membro) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => EditarMembroScreen(membro: membro),
+        builder: (context) => EditarMembroScreen(
+          membro: membro,
+          databaseReference: _databaseReference,
+        ),
       ),
     ).then((result) {
       if (result != null && result) {
-        _carregarMembros();
+        _carregarNomesMembros();
       }
     });
   }
 
-  void _excluirMembro(Membro membro) {
-    _databaseReference.child(membro.id!).remove().then((_) {
-      _carregarMembros();
-    });
+  void _excluirMembro(Membro membro) async {
+    DatabaseReference presencesReference =
+    FirebaseDatabase.instance.reference().child('presences');
+
+    try {
+      await _databaseReference.child(membro.id!).remove();
+
+      // Remove the associated presence records
+      DataSnapshot snapshot = await _databaseReference.once().then((event) => event.snapshot);
+
+
+      if (snapshot.value != null) {
+        Map<dynamic, dynamic> presences =
+        (snapshot.value as Map<dynamic, dynamic>);
+
+        presences.forEach((key, value) async {
+          await presencesReference.child(key).remove();
+        });
+      }
+
+      // Reload the members after deletion
+      _carregarNomesMembros();
+    } catch (error) {
+      print('Error deleting member: $error');
+    }
   }
+
+
+
+
 
   void _openCadastroMembros() {
     Navigator.push(
@@ -152,22 +265,33 @@ class _ListarMembrosState extends State<ListarMembros> {
       MaterialPageRoute(builder: (context) => CadastrarMembro()),
     ).then((result) {
       if (result != null && result) {
-        _carregarMembros();
+        _carregarNomesMembros();
       }
     });
   }
+
+  String _formatDate(DateTime? date) {
+    return date != null ? DateFormat('yyyy-MM-ddd').format(date) : '';
+  }
+
 }
 
 class EditarMembroScreen extends StatefulWidget {
   final Membro membro;
+  final DatabaseReference databaseReference;
 
-  EditarMembroScreen({required this.membro});
+  EditarMembroScreen({required this.membro, required this.databaseReference});
 
   @override
   _EditarMembroScreenState createState() => _EditarMembroScreenState();
 }
 
 class _EditarMembroScreenState extends State<EditarMembroScreen> {
+
+  String _formatDate(DateTime? date) {
+    return date != null ? DateFormat('dd/MM/yyyy').format(date) : '';
+  }
+
   late TextEditingController _nomeController;
   late TextEditingController _dataAniversarioController;
   late TextEditingController _tipoMembroController;
@@ -200,7 +324,7 @@ class _EditarMembroScreenState extends State<EditarMembroScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             _buildNomeField(),
-            _buildDataAniversarioField(),
+            _buildDataAniversarioField(context),
             _buildTipoMembroField(),
             _buildEnderecoField(),
             _buildFotoField(),
@@ -223,11 +347,43 @@ class _EditarMembroScreenState extends State<EditarMembroScreen> {
     );
   }
 
-  Widget _buildDataAniversarioField() {
-    return TextFormField(
-      controller: _dataAniversarioController,
-      decoration: InputDecoration(labelText: 'Data de Aniversário'),
+  Widget _buildDataAniversarioField(BuildContext context) {
+    return InkWell(
+      onTap: () {
+        _selecionarData(context);
+      },
+      child: InputDecorator(
+        decoration: InputDecoration(
+          labelText: 'Data de Aniversário',
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              _formatDate(widget.membro.dataAniversario),
+            ),
+            Icon(Icons.calendar_today),
+          ],
+        ),
+      ),
     );
+  }
+
+  Future<void> _selecionarData(BuildContext context) async {
+    DateTime? dataSelecionada = await showDatePicker(
+      context: context,
+      initialDate: widget.membro.dataAniversario ?? DateTime.now(),
+      firstDate: DateTime(1900),
+      lastDate: DateTime(2101),
+    );
+
+    if (dataSelecionada != null && dataSelecionada != widget.membro.dataAniversario) {
+      setState(() {
+        widget.membro.dataAniversario = dataSelecionada;
+        _dataAniversarioController.text = _formatDate(dataSelecionada);
+      });
+    }
   }
 
   Widget _buildTipoMembroField() {
@@ -269,11 +425,38 @@ class _EditarMembroScreenState extends State<EditarMembroScreen> {
       foto: novoCaminhoFoto.isNotEmpty ? novoCaminhoFoto : null,
     );
 
-    // Implemente a lógica de atualização no banco de dados (Firebase ou outro)
-    // Exemplo fictício: await _databaseReference.child(widget.membro.id!).update({...});
+    try {
+      // Atualize apenas os campos que foram alterados
+      Map<String, dynamic> updates = {
+        'nome': membroAtualizado.nome,
+        if (membroAtualizado.dataAniversario != null)
+          'dataAniversario': membroAtualizado.dataAniversario?.toIso8601String(),
+        'tipoMembro': membroAtualizado.tipoMembro,
+        'endereco': membroAtualizado.endereco,
+        if (membroAtualizado.foto != null) 'foto': membroAtualizado.foto,
+      };
 
-    Navigator.pop(context, true);
+      await widget.databaseReference.child(widget.membro.id!).update(updates);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Alterações salvas com sucesso!'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      Navigator.pop(context, true);
+    } catch (error) {
+      print('Erro ao salvar alterações: $error');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao salvar alterações. Tente novamente.'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
   }
+
 
   @override
   void dispose() {
