@@ -1,12 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:permission_handler/permission_handler.dart';
-import 'package:contador/screens/cadastrar_membro.dart';
-import 'package:contador/screens/listar_membros.dart';
-import 'package:contador/screens/cadastro_presenca.dart';
 import 'package:contador/widgets/menu_lateral.dart';
-import 'package:contador/screens/splashscreen.dart';
-import 'package:contador/firebase_options.dart';
+import 'package:intl/intl.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:contador/models/membro.dart';
+import 'package:permission_handler/permission_handler.dart';
+
+import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,85 +23,228 @@ void main() async {
 }
 
 class MyApp extends StatelessWidget {
-  const MyApp({Key? key});
+  const MyApp({Key? key}) : super(key: key);
 
   @override
-  Widget build(BuildContext contegtfxt) {
+  Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Controle Presença CEDRINHO',
       theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.lightGreen).copyWith(
-          background: Colors.white,
-        ),
+        primarySwatch: Colors.green,
       ),
-      home: MyHomePage(title: 'Controle Presença CEDRINHO'),
+      home: ListarMembros(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({Key? key, required this.title});
+class ListarMembros extends StatefulWidget {
+  @override
+  _ListarMembrosState createState() => _ListarMembrosState();
+}
 
-  final String title;
+class _ListarMembrosState extends State<ListarMembros> {
+  final DatabaseReference _databaseReference =
+  FirebaseDatabase.instance.reference().child('membros');
+  List<Membro> membros = [];
+  List<Membro> membrosAniversariantes = [];
+  TextEditingController _searchController = TextEditingController();
+  late PageController _pageController;
+  int _currentPage = 0;
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
+  void initState() {
+    super.initState();
+    _pageController = PageController(initialPage: 0, viewportFraction: 1);
+    _startAutoScroll();
+    _carregarNomesMembros();
 
-class _MyHomePageState extends State<MyHomePage> {
-  void _openCadastroMembros() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => CadastrarMembro()),
-    );
   }
 
-  void _checkFirebaseConnection() async {
+  Future<void> _carregarNomesMembros() async {
     try {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
-      print('Conexão com o Firebase bem-sucedida!');
-    } catch (e) {
-      print('Erro na conexão com o Firebase: $e');
+      DatabaseEvent event = await _databaseReference.once();
+      DataSnapshot snapshot = event.snapshot;
+
+      if (snapshot.value != null) {
+        Map<dynamic, dynamic>? values =
+        snapshot.value as Map<dynamic, dynamic>?;
+
+        if (values != null) {
+          List<Membro> listaMembros = [];
+
+          for (var entry in values.entries) {
+            var key = entry.key;
+            var value = entry.value;
+
+            try {
+              DatabaseEvent event =
+              await _databaseReference.child(key).once();
+              DataSnapshot snapshot = event.snapshot;
+
+              if (snapshot.value != null) {
+                Map<dynamic, dynamic>? data =
+                snapshot.value as Map<dynamic, dynamic>?;
+
+                if (data != null) {
+                  listaMembros.add(
+                    Membro(
+                      id: key,
+                      nome: value['nome'],
+                      foto: data['foto'],
+                      dataAniversario: data['dataAniversario'] != null
+                          ? DateTime.parse(data['dataAniversario'])
+                          : null,
+                      tipoMembro: data['tipoMembro'],
+                      endereco: data['endereco'],
+                    ),
+                  );
+                }
+              }
+            } catch (error) {
+              print('Erro ao carregar dados do membro: $error');
+            }
+          }
+
+          // Ordena os membros pelo nome
+          listaMembros.sort((a, b) => a.nome.compareTo(b.nome));
+
+          setState(() {
+            membros = listaMembros;
+            membrosAniversariantes = _filtrarMembrosAniversariantes(listaMembros);
+          });
+        }
+      }
+    } catch (error) {
+      print('Erro ao carregar membros: $error');
     }
+  }
+
+  List<Membro> _filtrarMembrosAniversariantes(List<Membro> membros) {
+    DateTime now = DateTime.now();
+    int currentMonth = now.month;
+
+    return membros.where((membro) => membro.dataAniversario?.month == currentMonth).toList();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.title),
+        title: Text('Controle Presença CEDRINHO'),
       ),
       drawer: MenuLateral(),
-      body: Center(
+      body: SingleChildScrollView(
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Image.asset(
-              'assets/acesso.jpg',
-              height: 200,
-              width: 200,
-            ),
-            Image.asset(
-              'assets/logo_cedrinho.jpg',
-              height: 200,
-              width: 200,
-            ),
-            SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: _checkFirebaseConnection,
-              child: Text('Verificar Conexão com Firebase'),
-            ),
+          children: [
+            _buildCarrossel(),
+            SizedBox(height: 10),
+            _buildAniversariantesList(),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _openCadastroMembros,
-        tooltip: 'Cadastrar Membros',
-        child: Icon(Icons.add),
+    );
+  }
+
+  Widget _buildCarrossel() {
+    return SizedBox(
+      height: 200,
+      child: PageView(
+        controller: _pageController,
+        children: [
+          Image.asset('assets/logo_cedrinho.jpg'),
+          Image.asset('assets/acesso.jpg'),
+        ],
       ),
     );
+  }
+
+
+
+  void _filtrarMembros(String query) {
+    setState(() {
+      membrosAniversariantes = membros
+          .where((membro) =>
+          membro.nome.toLowerCase().contains(query.toLowerCase()))
+          .toList();
+    });
+  }
+
+  Widget _buildAniversariantesList() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          'Aniversariantes do Mês',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 24, // Altere o tamanho da fonte conforme necessário
+          ),
+        ),
+        SizedBox(height: 10),
+        ...membrosAniversariantes.map((membro) {
+          return _buildBirthdayCard(
+            membro.nome,
+            _formatDate(membro.dataAniversario),
+            membro.foto, // Passa o caminho da foto do membro
+          );
+        }).toList(),
+      ],
+    );
+  }
+
+
+
+
+  Widget _buildBirthdayCard(String name, String birthday, String? fotoPath) {
+    return Card(
+      child: ListTile(
+        leading: _buildFotoMembro(fotoPath), // Exibe a foto do membro
+        title: Text(name),
+        subtitle: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text('Aniversário em $birthday'),
+            Icon(Icons.cake), // Ícone de bolo
+          ],
+        ),
+      ),
+    );
+  }
+
+
+  Widget _buildFotoMembro(String? fotoPath) {
+    return CircleAvatar(
+      radius: 30,
+      backgroundImage: fotoPath != null
+          ? NetworkImage(fotoPath)
+          : null,
+      child: fotoPath == null
+          ? Icon(Icons.person, size: 60, color: Colors.white)
+          : null,
+    );
+  }
+
+
+
+  String _formatDate(DateTime? date) {
+    return date != null ? DateFormat('dd/MM/yyyy').format(date) : '';
+  }
+
+  void _startAutoScroll() {
+    Timer.periodic(Duration(seconds: 3), (timer) {
+      if (_pageController.hasClients) {
+        if (_currentPage < 1) {
+          _currentPage++;
+        } else {
+          _currentPage = 0;
+        }
+        _pageController.animateToPage(
+          _currentPage,
+          duration: Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
   }
 }

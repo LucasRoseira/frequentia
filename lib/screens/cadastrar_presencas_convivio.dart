@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:contador/models/membro.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:intl/intl.dart';
 
@@ -11,30 +10,31 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: CadastroPresenca(),
+      home: CadastroPresencaConvivio(),
     );
   }
 }
 
-class CadastroPresenca extends StatefulWidget {
+class CadastroPresencaConvivio extends StatefulWidget {
   @override
-  _CadastroPresencaState createState() => _CadastroPresencaState();
+  _CadastroPresencaConvivioState createState() =>
+      _CadastroPresencaConvivioState();
 }
 
-class _CadastroPresencaState extends State<CadastroPresenca> {
+class _CadastroPresencaConvivioState extends State<CadastroPresencaConvivio> {
   final DatabaseReference _databaseReference =
   FirebaseDatabase.instance.reference().child('membros');
   final DatabaseReference _presencasReference =
   FirebaseDatabase.instance.reference().child('presencas');
-  List<Membro> membros = [];
+  List<String> membros = [];
   Map<String, bool> presencas = {};
+  String selectedConvivio = ''; // Adiciona a variável para armazenar o convívio selecionado
   DateTime currentDate = DateTime.now();
 
   @override
   void initState() {
     super.initState();
     _carregarMembros();
-    _carregarPresencas(_formatDate(currentDate));
   }
 
   Future<bool> _verificarPresencaCadastro(
@@ -73,7 +73,7 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Cadastro de Presença'),
+        title: Text('Cadastro de Presença - Convívio'),
       ),
       body: Column(
         children: [
@@ -97,6 +97,22 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
             ),
           ),
           SizedBox(height: 8),
+          DropdownButton<String>(
+            value: selectedConvivio,
+            items: membros.map((String convivio) {
+              return DropdownMenuItem<String>(
+                value: convivio,
+                child: Text(convivio),
+              );
+            }).toList(),
+            onChanged: (String? newValue) {
+              setState(() {
+                selectedConvivio = newValue!;
+                _carregarPresencas(_formatDate(currentDate), selectedConvivio);
+              });
+            },
+          ),
+          SizedBox(height: 8),
           Container(
             width: double.infinity,
             child: ElevatedButton(
@@ -115,8 +131,6 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
               child: Text('Marcar/Desmarcar Todas as Presenças'),
             ),
           ),
-
-
           SizedBox(height: 8),
           Expanded(
             child: ListView.builder(
@@ -128,13 +142,13 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
                   title: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('${membros[index].nome}'),
+                      Text('${membros[index]}'),
                       Checkbox(
-                        value: presencas[membros[index].id] ?? false,
+                        value: presencas[membros[index]] ?? false,
                         onChanged: (value) {
-                          if (membros[index].id != null) {
+                          if (membros[index] != null) {
                             _atualizarPresenca(
-                              membros[index].id!,
+                              membros[index],
                               _formatDate(currentDate),
                               value ?? false,
                             );
@@ -194,31 +208,19 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
         snapshot.value as Map<dynamic, dynamic>?;
 
         if (values != null) {
-          List<Membro> listaMembros = [];
+          List<String> listaMembros = [];
 
           values.forEach((key, value) {
-            listaMembros.add(
-              Membro(
-                id: key,
-                nome: value['nome'],
-                dataAniversario: value['dataAniversario'] != null
-                    ? DateTime.parse(value['dataAniversario'])
-                    : null,
-                tipoMembro: value['tipoMembro'],
-                endereco: value['endereco'],
-              ),
-            );
+            listaMembros.add(value['convivio'] as String); // Adiciona o convívio em vez do ID
           });
 
-          listaMembros.sort((a, b) => a.nome.compareTo(b.nome));
+          // Remove os convívios duplicados
+          listaMembros = listaMembros.toSet().toList();
+
+          listaMembros.sort(); // Ordena os convívios alfabeticamente
 
           setState(() {
             membros = listaMembros;
-
-            // Carregar presenças para cada membro
-            membros.forEach((membro) {
-              _carregarPresencasMembro(membro.id!);
-            });
           });
         }
       }
@@ -227,7 +229,7 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
     }
   }
 
-  Future<void> _carregarPresencas(String formattedDate) async {
+  Future<void> _carregarPresencas(String formattedDate, String convivio) async {
     try {
       DatabaseEvent event =
       await _presencasReference.child(formattedDate).once();
@@ -239,12 +241,11 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
         Map<String, bool> loadedPresencas = {};
 
         membros.forEach((membro) {
-          String memberId = membro.id ?? '';
-          bool hasAttendance = values['members']?.contains(memberId) ?? false;
+          bool hasAttendance = values['members']?.contains(membro) ?? false;
 
-          print('Membro: $memberId, Tem Presença: $hasAttendance');
+          print('Membro: $membro, Tem Presença: $hasAttendance');
 
-          loadedPresencas[memberId] = hasAttendance;
+          loadedPresencas[membro] = hasAttendance;
         });
 
         print('Presenças carregadas: $loadedPresencas');
@@ -259,7 +260,7 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
         // Se não houver presenças para a data, definir todos os checkboxes como falso
         Map<String, bool> emptyPresencas = {};
         membros.forEach((membro) {
-          emptyPresencas[membro.id ?? ''] = false;
+          emptyPresencas[membro] = false;
         });
 
         setState(() {
@@ -288,29 +289,6 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
       }
     } catch (error) {
       print('Erro ao atualizar presença: $error');
-    }
-  }
-
-  Future<void> _carregarPresencasMembro(String memberId) async {
-    try {
-      String formattedDate = _formatDate(currentDate);
-
-      DatabaseEvent event =
-      await _presencasReference.child(formattedDate).once();
-      DataSnapshot snapshot = event.snapshot;
-
-      if (snapshot.value is Map) {
-        Map<dynamic, dynamic> values = snapshot.value as Map<dynamic, dynamic>;
-
-        bool hasAttendance = values['members']?.contains(memberId) ?? false;
-
-        // Atualizar presença do membro específico
-        setState(() {
-          presencas[memberId] = hasAttendance;
-        });
-      }
-    } catch (error) {
-      print('Erro ao carregar presenças do membro: $error');
     }
   }
 
@@ -360,7 +338,7 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
       String formattedDate = _formatDate(pickedDate);
 
       // Carregar presenças e atualizar state
-      await _carregarPresencas(formattedDate);
+      await _carregarPresencas(formattedDate, selectedConvivio);
 
       setState(() {
         currentDate = pickedDate;

@@ -6,6 +6,7 @@ class Membro {
   String? tipoMembro;
   String? endereco;
   bool? presenca; // Marcação de nulabilidade
+  String? convivio; // Campo para representar o convívio
 
   Membro({
     required this.nome,
@@ -15,6 +16,7 @@ class Membro {
     this.tipoMembro,
     this.endereco,
     this.presenca = false, // Valor padrão
+    this.convivio, // Adicionando o campo convivio
   });
 
   Map<String, dynamic> toMap() {
@@ -26,6 +28,7 @@ class Membro {
       'tipoMembro': tipoMembro,
       'endereco': endereco,
       'presenca': presenca,
+      'convivio': convivio, // Incluindo convivio no mapa
     };
   }
 
@@ -37,6 +40,7 @@ class Membro {
       'tipoMembro': tipoMembro,
       'endereco': endereco,
       'presenca': presenca,
+      'convivio': convivio,
     };
   }
 
@@ -51,6 +55,7 @@ class Membro {
       tipoMembro: map['tipoMembro'],
       endereco: map['endereco'],
       presenca: map['presenca'],
+      convivio: map['convivio'],
     );
   }
 }

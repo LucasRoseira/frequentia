@@ -1,5 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_storage/firebase_storage.dart'; // Importe o pacote Firebase Storage
 import 'package:contador/models/membro.dart';
+import 'package:contador/models/convivio.dart'; // Importe a classe Convivio atualizada
 
 class CadastrarConvivio extends StatefulWidget {
   @override
@@ -7,22 +13,83 @@ class CadastrarConvivio extends StatefulWidget {
 }
 
 class _CadastrarConvivioState extends State<CadastrarConvivio> {
+  final TextEditingController _nomeController = TextEditingController();
   final TextEditingController _enderecoController = TextEditingController();
   final TextEditingController _diaController = TextEditingController();
   final TextEditingController _pesquisaController = TextEditingController();
+  final FocusNode _pesquisaFocusNode = FocusNode();
+  final ImagePicker _imagePicker = ImagePicker(); // Instância do ImagePicker
 
   List<Membro> responsaveis = [];
   List<Membro> _todosOsMembros = [];
   List<Membro> _membrosFiltrados = [];
 
+  final DatabaseReference _conviviosReference =
+  FirebaseDatabase.instance.reference().child('convivios');
+
+  final DatabaseReference _databaseReference =
+  FirebaseDatabase.instance.reference().child('membros');
+
+  // Variáveis para armazenamento da foto selecionada
+  XFile? _selectedImage;
+  String? _photoURL;
+
   @override
   void initState() {
     super.initState();
-    _todosOsMembros = [
-      Membro(nome: 'Membro 1'),
-      Membro(nome: 'Membro 2'),
-      Membro(nome: 'Membro 3'),
-    ];
+    _carregarNomesMembros();
+  }
+
+  Future<void> _carregarNomesMembros() async {
+    try {
+      DatabaseEvent event = await _databaseReference.once();
+      DataSnapshot snapshot = event.snapshot;
+
+      if (snapshot.value != null) {
+        Map<dynamic, dynamic>? values =
+        snapshot.value as Map<dynamic, dynamic>?;
+
+        if (values != null) {
+          List<Membro> listaMembros = [];
+
+          for (var entry in values.entries) {
+            var key = entry.key;
+            var value = entry.value;
+
+            try {
+              listaMembros.add(
+                Membro(
+                  id: key,
+                  nome: value['nome'],
+                ),
+              );
+            } catch (error) {
+              print('Erro ao carregar dados do membro: $error');
+            }
+          }
+
+          // Ordena os membros pelo nome
+          listaMembros.sort((a, b) => a.nome.compareTo(b.nome));
+
+          setState(() {
+            _todosOsMembros = listaMembros;
+            _membrosFiltrados = _todosOsMembros;
+          });
+        }
+      }
+    } catch (error) {
+      print('Erro ao carregar membros: $error');
+    }
+  }
+
+  void _filtrarMembros(String query) {
+    setState(() {
+      _membrosFiltrados = _todosOsMembros
+          .where((membro) =>
+      membro.nome.toLowerCase().contains(query.toLowerCase()) &&
+          !responsaveis.contains(membro)) // Exclui membros que já são responsáveis
+          .toList();
+    });
   }
 
   @override
@@ -36,19 +103,74 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            _buildNomeConvivioField(), // Adicionando campo para nome do convívio
+            SizedBox(height: 16),
             _buildResponsaveisField(),
             SizedBox(height: 16),
-            _buildEnderecoField(), SizedBox(height: 16),
+            _buildEnderecoField(),
+            SizedBox(height: 16),
             _buildDiaField(),
             SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                _salvarConvivio();
-              },
-              child: Text('Salvar Convívio'),
+            _buildPhotoSelectorButton(), // Adicionando o seletor de foto
+            SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        _salvarConvivio();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.zero,
+                        ),
+                        minimumSize: Size(double.infinity, 40),
+                      ),
+                      child: Text(
+                        'Salvar Convívio',
+                      ),
+                    ),
+                  ),
+                ),
+                SizedBox(width: 16),
+                Expanded(
+                  child: Container(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        _visualizarDados();
+                      },
+                      style: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.zero,
+                        ),
+                        minimumSize: Size(double.infinity, 40),
+                        backgroundColor:
+                        Colors.blue, // Cor de fundo
+                      ),
+                      child: Text(
+                        'Visualizar Dados',
+                        style: TextStyle(color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildNomeConvivioField() {
+    return TextField(
+      controller: _nomeController,
+      decoration: InputDecoration(
+        labelText: 'Nome do Convívio',
+        labelStyle: TextStyle(fontWeight: FontWeight.bold),
       ),
     );
   }
@@ -65,21 +187,11 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
           ),
         ),
         SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: _buildPesquisaMembroField(),
-            ),
-            IconButton(
-              icon: Icon(Icons.add),
-              onPressed: () {
-                _adicionarResponsavel();
-              },
-            ),
-          ],
-        ),
+        _buildPesquisaMembroField(),
         SizedBox(height: 8),
-        _buildListaMembrosFiltrados(),
+        _pesquisaFocusNode.hasFocus
+            ? _buildListaMembrosFiltrados()
+            : SizedBox.shrink(),
         SizedBox(height: 8),
         _buildListaResponsaveis(),
       ],
@@ -90,31 +202,27 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        TextFormField(
-          controller: _pesquisaController,
-          decoration: InputDecoration(
-            labelText: 'Pesquisar Membro',
-            suffixIcon: Icon(Icons.search),
+        Container(
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(8.0),
+            border: Border.all(color: Colors.black),
           ),
-          onChanged: (value) {
-            setState(() {
-              _membrosFiltrados = _filtrarMembros(value);
-            });
-          },
+          padding: EdgeInsets.symmetric(horizontal: 8.0),
+          child: TextFormField(
+            focusNode: _pesquisaFocusNode,
+            controller: _pesquisaController,
+            decoration: InputDecoration(
+              labelText: 'Pesquisar Membro',
+              suffixIcon: Icon(Icons.search),
+              border: InputBorder.none,
+            ),
+            onChanged: (value) {
+              _filtrarMembros(value); // Chamada direta para filtrar membros
+            },
+          ),
         ),
-        SizedBox(height: 8),
-        _buildListaMembrosFiltrados(),
       ],
     );
-  }
-
-  List<Membro> _filtrarMembros(String query) {
-    return _todosOsMembros.where((membro) {
-      final nomeMembro = membro.nome.toLowerCase();
-      final queryLower = query.toLowerCase();
-
-      return nomeMembro.contains(queryLower);
-    }).toList();
   }
 
   Widget _buildListaMembrosFiltrados() {
@@ -124,7 +232,12 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
         itemCount: _membrosFiltrados.length,
         itemBuilder: (context, index) {
           return ListTile(
-            title: Text(_membrosFiltrados[index].nome),
+            title: Text(
+              _membrosFiltrados[index].nome,
+              style: TextStyle(
+                fontWeight: FontWeight.bold, // Adiciona negrito ao nome
+              ),
+            ),
             onTap: () {
               _adicionarResponsavel(_membrosFiltrados[index]);
             },
@@ -137,14 +250,20 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
   Widget _buildEnderecoField() {
     return TextField(
       controller: _enderecoController,
-      decoration: InputDecoration(labelText: 'Endereço do Convívio'),
+      decoration: InputDecoration(
+        labelText: 'Endereço do Convívio',
+        labelStyle: TextStyle(fontWeight: FontWeight.bold),
+      ),
     );
   }
 
   Widget _buildDiaField() {
     return TextField(
       controller: _diaController,
-      decoration: InputDecoration(labelText: 'Dia do Convívio (ex: Segunda-feira)'),
+      decoration: InputDecoration(
+        labelText: 'Dia do Convívio (ex: Segunda-feira)',
+        labelStyle: TextStyle(fontWeight: FontWeight.bold),
+      ),
     );
   }
 
@@ -159,25 +278,243 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
     );
   }
 
-  void _adicionarResponsavel([Membro? membro]) {
-    if (membro != null) {
+  void _adicionarResponsavel(Membro membro) {
+    // Verifica se o membro já está na lista de responsáveis
+    if (!responsaveis.contains(membro)) {
       setState(() {
         responsaveis.add(membro);
         _pesquisaController.clear();
         _membrosFiltrados.clear();
+        print('Adicionado responsável: ${membro.nome}');
       });
+    } else {
+      // Se o membro já estiver na lista, exiba um alerta ou mensagem informando ao usuário
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Membro já adicionado'),
+            content: Text(
+                'O membro ${membro.nome} já foi adicionado como responsável.'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop(); // Fechar o diálogo
+                },
+                child: Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
     }
   }
 
+  void _salvarConvivio() async {
+    // Verifica se algum campo está vazio
+    if (_nomeController.text.isEmpty ||
+        _enderecoController.text.isEmpty ||
+        _diaController.text.isEmpty ||
+        responsaveis.isEmpty ||
+        _selectedImage == null) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            title: Text('Campos obrigatórios não preenchidos'),
+            content: Text(
+                'Preencha todos os campos obrigatórios e selecione uma foto.'),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop(); // Fechar o diálogo
+                },
+                child: Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
+      return;
+    }
 
-  void _salvarConvivio() {
-    print('Responsáveis: $responsaveis');
-    print('Endereço: ${_enderecoController.text}');
-    print('Dia: ${_diaController.text}');
+    // Salva a foto do convívio no armazenamento do Firebase
+    await _savePhotoToStorage();
 
+    // Mostra os dados do convívio antes de salvar
+    if (mounted) {
+      _mostrarDadosConvivio();
+    }
+
+    // Crie um mapa com os dados do convívio
+    Map<String, dynamic> convivioData = {
+      'nome': _nomeController.text, // Incluindo o nome do convívio
+      'endereco': _enderecoController.text,
+      'dia': _diaController.text,
+      'responsaveis': responsaveis.map((membro) => membro.id).toList(),
+      'photoURL': _photoURL, // URL da foto do convívio
+      'dataRegistro': DateTime.now().toIso8601String(),
+    };
+
+    // Salve os dados no Firebase no nó 'convivios'
+    String convivioId = _conviviosReference.push().key ?? '';
+    _conviviosReference.child(convivioId).set(convivioData);
+
+    // Limpe os campos e listas
+    _nomeController.clear();
     _enderecoController.clear();
     _diaController.clear();
     _pesquisaController.clear();
     responsaveis.clear();
+    _selectedImage = null;
+    _photoURL = null;
+
+    // Exibe uma mensagem de sucesso
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Convívio salvo com sucesso!'),
+        duration: Duration(seconds: 3),
+      ),
+    );
+  }
+
+  Future<void> _savePhotoToStorage() async {
+    // Cria uma referência para o local onde a foto será armazenada
+    final photoRef = FirebaseStorage.instance
+        .ref()
+        .child('convivios_photos')
+        .child('${DateTime.now()}.jpg');
+
+    // Carrega o arquivo da foto selecionada
+    final File imageFile = File(_selectedImage!.path);
+
+    // Envia o arquivo para o armazenamento do Firebase
+    final uploadTask = photoRef.putFile(imageFile);
+
+    // Aguarda o término do upload e obtém a URL da foto
+    await uploadTask.whenComplete(() async {
+      _photoURL = await photoRef.getDownloadURL();
+    });
+  }
+
+  // Função para selecionar uma foto
+  Future<void> _selectPhoto() async {
+    final pickedImage =
+    await _imagePicker.pickImage(source: ImageSource.gallery);
+
+    setState(() {
+      _selectedImage = pickedImage;
+    });
+  }
+
+  // Widget para mostrar a foto selecionada e o botão para selecionar
+  Widget _buildPhotoSelectorButton() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Foto do Convívio',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+        SizedBox(height: 8),
+        _selectedImage != null
+            ? Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Image.file(
+              File(_selectedImage!.path),
+              height: 200,
+              width: 200,
+              fit: BoxFit.cover,
+            ),
+            SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: TextButton(
+                onPressed: _selectPhoto,
+                style: TextButton.styleFrom(
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.zero,
+                  ),
+                  minimumSize: Size(double.infinity, 40),
+                  backgroundColor: Colors
+                      .blue, // Altere a cor de fundo conforme necessário
+                ),
+                child: Text(
+                  'Selecionar outra foto',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ),
+          ],
+        )
+            : Container(
+          width: double.infinity,
+          padding: EdgeInsets.symmetric(vertical: 8),
+          child: ElevatedButton(
+            onPressed: _selectPhoto,
+            style: ElevatedButton.styleFrom(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.zero,
+              ),
+              minimumSize: Size(double.infinity, 40),
+              // Altere a cor de fundo conforme necessário
+            ),
+            child: Text(
+              'Selecionar foto',
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Função para visualizar os dados antes de salvar
+  void _visualizarDados() {
+    // Mostra os dados do convívio antes de salvar
+    _mostrarDadosConvivio();
+  }
+
+  // Função para mostrar os dados do convívio em um popup
+  void _mostrarDadosConvivio() {
+    String nomeConvivio = _nomeController.text;
+    String enderecoConvivio = _enderecoController.text;
+    String diaConvivio = _diaController.text;
+    List<String> responsaveisConvivio =
+    responsaveis.map((membro) => membro.nome).toList();
+    String fotoConvivio = _photoURL ?? 'Nenhuma foto selecionada';
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Dados do Convívio'),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Nome do Convívio: $nomeConvivio'),
+                Text('Endereço do Convívio: $enderecoConvivio'),
+                Text('Dia do Convívio: $diaConvivio'),
+                Text('Responsáveis: ${responsaveisConvivio.join(", ")}'),
+                Text('Foto do Convívio: $fotoConvivio'),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Fechar o diálogo
+              },
+              child: Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
   }
 }

@@ -1,6 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:contador/main.dart'; // Certifique-se de importar o arquivo principal MyApp
+import 'package:contador/main.dart'; // Importe o arquivo onde MyHomePage está definido
 
 class SplashScreen extends StatefulWidget {
   @override
@@ -18,7 +18,7 @@ class _SplashScreenState extends State<SplashScreen> {
           () {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => MyHomePage(title: 'Controle Presença CEDRINHO')),
+          MaterialPageRoute(builder: (context) => MyApp()), // Use MyApp para acessar MyHomePage
         );
       },
     );

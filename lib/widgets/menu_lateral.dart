@@ -1,9 +1,12 @@
+import 'package:contador/screens/cadastrar_presencas_convivio.dart';
 import 'package:flutter/material.dart';
 import 'package:contador/screens/cadastrar_convivio.dart';
 import 'package:contador/screens/cadastrar_membro.dart';
 import 'package:contador/screens/cadastro_presenca.dart';
 import 'package:contador/screens/listar_membros.dart';
 import 'package:contador/screens/listar_presencas.dart';
+import 'package:contador/screens/listar_convivios.dart'; // Importe a tela de lista de convívios
+import 'package:contador/screens/cadastrar_convivio.dart'; // Importe a tela de cadastro de presença de convívio
 
 class MenuLateral extends StatelessWidget {
   @override
@@ -12,9 +15,9 @@ class MenuLateral extends StatelessWidget {
       child: ListView(
         children: [
           ListTile(
-            leading: ImageIcon(
-              AssetImage('assets/icons/grupo-de-tres-homens-de-pe-lado-a-lado-abracando-se.png'),
-              size: 32, // Defina o tamanho desejado
+            leading: Icon(
+              Icons.add_box,
+              size: 32,
             ),
             title: Text(
               'Cadastrar Convívio',
@@ -30,7 +33,7 @@ class MenuLateral extends StatelessWidget {
           ListTile(
             leading: ImageIcon(
               AssetImage('assets/icons/comparecimento.png'),
-              size: 32, // Defina o tamanho desejado
+              size: 32,
             ),
             title: Text(
               'Visualizar Presença',
@@ -44,9 +47,9 @@ class MenuLateral extends StatelessWidget {
             },
           ),
           ListTile(
-            leading: ImageIcon(
-              AssetImage('assets/icons/membro-da-equipe.png'),
-              size: 32, // Defina o tamanho desejado
+            leading: Icon(
+              Icons.add,
+              size: 32,
             ),
             title: Text(
               'Cadastrar Membros',
@@ -60,9 +63,9 @@ class MenuLateral extends StatelessWidget {
             },
           ),
           ListTile(
-            leading: ImageIcon(
-              AssetImage('assets/icons/visualizar.png'),
-              size: 32, // Defina o tamanho desejado
+            leading: Icon(
+              Icons.group,
+              size: 32,
             ),
             title: Text(
               'Visualizar Membros',
@@ -76,9 +79,9 @@ class MenuLateral extends StatelessWidget {
             },
           ),
           ListTile(
-            leading: ImageIcon(
-              AssetImage('assets/icons/adicionar-simbolo-do-usuario.png'),
-              size: 32, // Defina o tamanho desejado
+            leading: Icon(
+              Icons.person_add,
+              size: 32,
             ),
             title: Text(
               'Cadastrar Presença',
@@ -88,6 +91,38 @@ class MenuLateral extends StatelessWidget {
               Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => CadastroPresenca()),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(
+              Icons.event,
+              size: 32,
+            ),
+            title: Text(
+              'Cadastrar Presença Convívio',
+              style: TextStyle(fontSize: 18),
+            ),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => CadastroPresencaConvivio()),
+              );
+            },
+          ),
+          ListTile(
+            leading: Icon(
+              Icons.list,
+              size: 32,
+            ),
+            title: Text(
+              'Lista de Convívios',
+              style: TextStyle(fontSize: 18),
+            ),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => ListaConvivios()),
               );
             },
           ),
