@@ -46,32 +46,53 @@ class _ListarPresencasState extends State<ListarPresencas> {
       appBar: AppBar(
         title: Text('Listar Presenças'),
       ),
-      body: Column(
+      body: Stack(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: _controller,
-              onChanged: (value) {
-                _filtrarMembros(value);
-              },
-              decoration: InputDecoration(
-                labelText: 'Filtrar por nome',
-                prefixIcon: Icon(Icons.search),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8.0),
+          Center(
+            child: Container(
+              width: double.infinity,
+                height: double.infinity,
+                decoration: BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage("assets/acesso.jpg"),
+                    fit: BoxFit.contain,
+                    alignment: Alignment.center,
+                    colorFilter: ColorFilter.mode(
+                      Colors.black.withOpacity(0.02),
+                      BlendMode.dstATop,
+                        ),
                 ),
               ),
             ),
           ),
-          Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.vertical,
-              child: SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: _buildMatrizPresencas(),
+          Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: TextField(
+                  controller: _controller,
+                  onChanged: (value) {
+                    _filtrarMembros(value);
+                  },
+                  decoration: InputDecoration(
+                    labelText: 'Filtrar por nome',
+                    prefixIcon: Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8.0),
+                    ),
+                  ),
+                ),
               ),
-            ),
+              Expanded(
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.vertical,
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: _buildMatrizPresencas(),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

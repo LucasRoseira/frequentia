@@ -3,9 +3,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:firebase_storage/firebase_storage.dart'; // Importe o pacote Firebase Storage
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:contador/models/membro.dart';
-import 'package:contador/models/convivio.dart'; // Importe a classe Convivio atualizada
+import 'package:contador/models/convivio.dart';
 
 class CadastrarConvivio extends StatefulWidget {
   @override
@@ -19,6 +19,7 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
   final TextEditingController _pesquisaController = TextEditingController();
   final FocusNode _pesquisaFocusNode = FocusNode();
   final ImagePicker _imagePicker = ImagePicker(); // Instância do ImagePicker
+  DateTime? _selectedDate;
 
   List<Membro> responsaveis = [];
   List<Membro> _todosOsMembros = [];
@@ -38,6 +39,15 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
   void initState() {
     super.initState();
     _carregarNomesMembros();
+    _pesquisaFocusNode.addListener(_onPesquisaFocusChange);
+  }
+
+  void _onPesquisaFocusChange() {
+    if (!_pesquisaFocusNode.hasFocus) {
+      setState(() {
+        _membrosFiltrados.clear(); // Limpa a lista de membros filtrados
+      });
+    }
   }
 
   Future<void> _carregarNomesMembros() async {
@@ -103,6 +113,8 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            _buildAvatarSelector(), // Avatar para selecionar a foto
+            SizedBox(height: 16),
             _buildNomeConvivioField(), // Adicionando campo para nome do convívio
             SizedBox(height: 16),
             _buildResponsaveisField(),
@@ -110,8 +122,6 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
             _buildEnderecoField(),
             SizedBox(height: 16),
             _buildDiaField(),
-            SizedBox(height: 16),
-            _buildPhotoSelectorButton(), // Adicionando o seletor de foto
             SizedBox(height: 16),
             Row(
               children: [
@@ -165,6 +175,31 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
     );
   }
 
+  // Método para construir o avatar seletor de foto
+  Widget _buildAvatarSelector() {
+    return GestureDetector(
+      onTap: _selectPhoto, // Chama a função para selecionar a foto
+      child: CircleAvatar(
+        radius: 80,
+        child: _selectedImage != null
+            ? ClipRRect(
+          borderRadius: BorderRadius.circular(80),
+          child: Image.file(
+            File(_selectedImage!.path),
+            width: 160,
+            height: 160,
+            fit: BoxFit.cover,
+          ),
+        )
+            : Icon(
+          Icons.camera_alt,
+          size: 60,
+          color: Colors.grey[800],
+        ),
+      ),
+    );
+  }
+
   Widget _buildNomeConvivioField() {
     return TextField(
       controller: _nomeController,
@@ -202,48 +237,64 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(8.0),
-            border: Border.all(color: Colors.black),
-          ),
-          padding: EdgeInsets.symmetric(horizontal: 8.0),
-          child: TextFormField(
-            focusNode: _pesquisaFocusNode,
-            controller: _pesquisaController,
-            decoration: InputDecoration(
-              labelText: 'Pesquisar Membro',
-              suffixIcon: Icon(Icons.search),
-              border: InputBorder.none,
+        GestureDetector(
+          onTap: () {
+            debugPrint('Campo de pesquisa clicado');
+            setState(() {
+              _pesquisaFocusNode.requestFocus(); // Foca no campo de pesquisa
+            });
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8.0),
+              border: Border.all(color: Colors.black),
             ),
-            onChanged: (value) {
-              _filtrarMembros(value); // Chamada direta para filtrar membros
-            },
+            padding: EdgeInsets.symmetric(horizontal: 8.0),
+            child: TextFormField(
+              focusNode: _pesquisaFocusNode,
+              controller: _pesquisaController,
+              decoration: InputDecoration(
+                labelText: 'Pesquisar Membro',
+                suffixIcon: Icon(Icons.search),
+                border: InputBorder.none,
+              ),
+              onChanged: (value) {
+                debugPrint('Texto digitado: $value');
+                _filtrarMembros(value); // Chamada para filtrar membros
+              },
+            ),
           ),
+        ),
+        AnimatedContainer(
+          duration: Duration(milliseconds: 300),
+          height: (_pesquisaFocusNode.hasFocus && _membrosFiltrados.isNotEmpty)
+              ? 200
+              : 0,
+          color: Colors.grey[
+          200], // Cor de fundo da lista de membros filtrados
+          child: _buildListaMembrosFiltrados(),
         ),
       ],
     );
   }
 
   Widget _buildListaMembrosFiltrados() {
-    return SizedBox(
-      height: 200,
-      child: ListView.builder(
-        itemCount: _membrosFiltrados.length,
-        itemBuilder: (context, index) {
-          return ListTile(
-            title: Text(
-              _membrosFiltrados[index].nome,
-              style: TextStyle(
-                fontWeight: FontWeight.bold, // Adiciona negrito ao nome
-              ),
+    return ListView.builder(
+      shrinkWrap: true,
+      itemCount: _membrosFiltrados.length,
+      itemBuilder: (context, index) {
+        return ListTile(
+          title: Text(
+            _membrosFiltrados[index].nome,
+            style: TextStyle(
+              fontWeight: FontWeight.bold, // Adiciona negrito ao nome
             ),
-            onTap: () {
-              _adicionarResponsavel(_membrosFiltrados[index]);
-            },
-          );
-        },
-      ),
+          ),
+          onTap: () {
+            _adicionarResponsavel(_membrosFiltrados[index], context);
+          },
+        );
+      },
     );
   }
 
@@ -257,28 +308,65 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
     );
   }
 
+  String? _selectedDay;
+
   Widget _buildDiaField() {
-    return TextField(
-      controller: _diaController,
+    List<String> diasDaSemana = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'];
+
+    return DropdownButtonFormField<String>(
       decoration: InputDecoration(
-        labelText: 'Dia do Convívio (ex: Segunda-feira)',
+        labelText: 'Dia do Convívio',
         labelStyle: TextStyle(fontWeight: FontWeight.bold),
       ),
+      value: _selectedDay,
+      onChanged: (String? newValue) {
+        setState(() {
+          _selectedDay = newValue;
+          _diaController.text = newValue ?? ''; // Atualiza o controlador do dia com o valor selecionado
+        });
+      },
+      items: diasDaSemana.map<DropdownMenuItem<String>>((String value) {
+        return DropdownMenuItem<String>(
+          value: value,
+          child: Text(value),
+        );
+      }).toList(),
     );
   }
+
+
 
   Widget _buildListaResponsaveis() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: responsaveis.map((membro) {
         return ListTile(
-          title: Text(membro.nome),
+          title: Row(
+            children: [
+              Expanded(
+                child: Text(membro.nome),
+              ),
+              IconButton(
+                icon: Icon(Icons.clear),
+                onPressed: () {
+                  _removerResponsavel(membro);
+                },
+              ),
+            ],
+          ),
         );
       }).toList(),
     );
   }
 
-  void _adicionarResponsavel(Membro membro) {
+  void _removerResponsavel(Membro membro) {
+    setState(() {
+      responsaveis.remove(membro);
+    });
+  }
+
+
+  void _adicionarResponsavel(Membro membro, BuildContext context) {
     // Verifica se o membro já está na lista de responsáveis
     if (!responsaveis.contains(membro)) {
       setState(() {
@@ -287,6 +375,9 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
         _membrosFiltrados.clear();
         print('Adicionado responsável: ${membro.nome}');
       });
+
+      // Exibe a mensagem de sucesso
+      _exibirMensagem('Membro adicionado com sucesso!', context);
     } else {
       // Se o membro já estiver na lista, exiba um alerta ou mensagem informando ao usuário
       showDialog(
@@ -295,7 +386,8 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
           return AlertDialog(
             title: Text('Membro já adicionado'),
             content: Text(
-                'O membro ${membro.nome} já foi adicionado como responsável.'),
+              'O membro ${membro.nome} já foi adicionado como responsável.',
+            ),
             actions: [
               TextButton(
                 onPressed: () {
@@ -310,11 +402,31 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
     }
   }
 
+  void _exibirMensagem(String mensagem, BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text('Sucesso'),
+          content: Text(mensagem),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   void _salvarConvivio() async {
     // Verifica se algum campo está vazio
     if (_nomeController.text.isEmpty ||
         _enderecoController.text.isEmpty ||
-        _diaController.text.isEmpty ||
+        _diaController.text.isEmpty || // Alteração aqui
         responsaveis.isEmpty ||
         _selectedImage == null) {
       showDialog(
@@ -363,7 +475,7 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
     // Limpe os campos e listas
     _nomeController.clear();
     _enderecoController.clear();
-    _diaController.clear();
+    _selectedDay = null;
     _pesquisaController.clear();
     responsaveis.clear();
     _selectedImage = null;
@@ -379,23 +491,29 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
   }
 
   Future<void> _savePhotoToStorage() async {
-    // Cria uma referência para o local onde a foto será armazenada
-    final photoRef = FirebaseStorage.instance
-        .ref()
-        .child('convivios_photos')
-        .child('${DateTime.now()}.jpg');
+    try {
+      // Cria uma referência para o local onde a foto será armazenada
+      final photoRef = FirebaseStorage.instance
+          .ref()
+          .child('convivios_photos')
+          .child('${DateTime.now()}.jpg');
 
-    // Carrega o arquivo da foto selecionada
-    final File imageFile = File(_selectedImage!.path);
+      // Carrega o arquivo da foto selecionada
+      final File imageFile = File(_selectedImage!.path);
 
-    // Envia o arquivo para o armazenamento do Firebase
-    final uploadTask = photoRef.putFile(imageFile);
+      // Envia o arquivo para o armazenamento do Firebase
+      await photoRef.putFile(imageFile);
 
-    // Aguarda o término do upload e obtém a URL da foto
-    await uploadTask.whenComplete(() async {
+      // Obtém a URL da foto após o upload
       _photoURL = await photoRef.getDownloadURL();
-    });
+
+    } catch (error) {
+      print('Erro ao salvar foto no armazenamento do Firebase: $error');
+      // Caso ocorra algum erro, defina _photoURL como null ou uma string vazia
+      _photoURL = null;
+    }
   }
+
 
   // Função para selecionar uma foto
   Future<void> _selectPhoto() async {
@@ -441,8 +559,8 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
                     borderRadius: BorderRadius.zero,
                   ),
                   minimumSize: Size(double.infinity, 40),
-                  backgroundColor: Colors
-                      .blue, // Altere a cor de fundo conforme necessário
+                  backgroundColor:
+                  Colors.blue, // Altere a cor de fundo conforme necessário
                 ),
                 child: Text(
                   'Selecionar outra foto',
@@ -500,7 +618,8 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
                 Text('Nome do Convívio: $nomeConvivio'),
                 Text('Endereço do Convívio: $enderecoConvivio'),
                 Text('Dia do Convívio: $diaConvivio'),
-                Text('Responsáveis: ${responsaveisConvivio.join(", ")}'),
+                Text(
+                    'Selecionar Responsável(is): ${responsaveisConvivio.join(", ")}'),
                 Text('Foto do Convívio: $fotoConvivio'),
               ],
             ),

@@ -61,6 +61,18 @@ class _CadastrarMembroState extends State<CadastrarMembro> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              GestureDetector(
+                onTap: () {
+                  _escolherFoto();
+                },
+                child: CircleAvatar(
+                  radius: 80,
+                  backgroundImage: _fotoPath != null ? FileImage(File(_fotoPath!)) : null,
+                  child: _fotoPath == null ? Icon(Icons.camera_alt, size: 60,
+                    color: Colors.grey[800],) : null,
+                ),
+              ),
+              SizedBox(height: 16),
               TextField(
                 controller: _nomeController,
                 decoration: InputDecoration(
@@ -163,21 +175,6 @@ class _CadastrarMembroState extends State<CadastrarMembro> {
                 decoration: InputDecoration(
                   labelText: 'Endereço',
                   labelStyle: TextStyle(fontWeight: FontWeight.bold),
-                ),
-              ),
-              SizedBox(height: 16),
-              _fotoPath != null
-                  ? Image.file(File(_fotoPath!))
-                  : ElevatedButton(
-                onPressed: () {
-                  _escolherFoto();
-                },
-                child: Text('Escolher Foto'),
-                style: ElevatedButton.styleFrom(
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.zero,
-                  ),
-                  minimumSize: Size(double.infinity, 40),
                 ),
               ),
               SizedBox(height: 16),

@@ -17,7 +17,7 @@ dependencies:
   mobx_codegen: ^2.6.0+1  #build.gradle Change this line
   image_picker: ^1.0.7
   permission_handler: ^11.3.0
-  intl: ^0.19.0
+  intl: ^0.18.1
   excel: ^4.0.2
   file_picker: ^6.1.1
   filesystem_picker: ^4.0.0
@@ -28,6 +28,13 @@ dependencies:
   firebase_storage: ^11.6.0
   firebase_app_check: ^0.2.1+14
   cached_network_image: ^3.3.1
+  flutter_localizations:
+    sdk: flutter
+
+
+flutter_localizations:
+  sdk: flutter
+
 
 dev_dependencies:
   flutter_test:

@@ -7,8 +7,10 @@ import 'package:intl/intl.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:contador/models/membro.dart';
 import 'package:permission_handler/permission_handler.dart';
-
+import 'package:intl/date_symbol_data_local.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'firebase_options.dart';
+import 'package:flutter/cupertino.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,7 +20,7 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-
+  await initializeDateFormatting('pt_BR', null);
   runApp(const MyApp());
 }
 
@@ -33,6 +35,14 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.green,
       ),
       home: ListarMembros(),
+      localizationsDelegates: [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ], // Use DefaultMaterialLocalizations.delegate instead of GlobalMaterialLocalizations.delegate
+      supportedLocales: [
+        const Locale('pt'), // Specify the supported locales
+      ],
     );
   }
 }

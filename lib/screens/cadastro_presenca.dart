@@ -1,20 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:contador/models/membro.dart';
 import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart'; // Importe este pacote
 
 void main() {
-  runApp(MyApp());
+  initializeDateFormatting('pt_BR', null).then((_) { // Inicialize os dados de localização antes de rodar o app
+    runApp(MyApp());
+  });
 }
+
 
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      localizationsDelegates: [
+        GlobalMaterialLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+      ], // Use DefaultMaterialLocalizations.delegate instead of GlobalMaterialLocalizations.delegate
+      supportedLocales: [
+        const Locale('pt'), // Specify the supported locales
+      ],
       home: CadastroPresenca(),
     );
   }
 }
+
 
 class CadastroPresenca extends StatefulWidget {
   @override
@@ -75,77 +88,96 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
       appBar: AppBar(
         title: Text('Cadastro de Presença'),
       ),
-      body: Column(
+      body: Stack(
         children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-          ),
-          InkWell(
-            onTap: () {
-              _mostrarDatePicker(context);
-            },
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.calendar_today),
-                SizedBox(width: 4),
-                Text(
-                  _formatDate(currentDate),
-                  style: TextStyle(fontSize: 16),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: 8),
-          Container(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () {
-                setState(() {
-                  presencas.forEach((key, value) {
-                    presencas[key] = !value;
-                  });
-                });
-              },
-              style: ElevatedButton.styleFrom(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.zero,
+          Center(
+            child: Container(
+              width: double.infinity,
+                height: double.infinity,
+                decoration: BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage("assets/acesso.jpg"),
+                    fit: BoxFit.contain,
+                    alignment: Alignment.center,
+                    colorFilter: ColorFilter.mode(
+                      Colors.black.withOpacity(0.02),
+                      BlendMode.dstATop,
+                        ),
+                        ),
+                      ),
+                    ),
+                  ),
+          Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+              ),
+              InkWell(
+                onTap: () {
+                  _mostrarDatePicker(context);
+                },
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.calendar_today),
+                    SizedBox(width: 4),
+                    Text(
+                      _formatDate(currentDate),
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ],
                 ),
               ),
-              child: Text('Marcar/Desmarcar Todas as Presenças'),
-            ),
-          ),
-
-
-          SizedBox(height: 8),
-          Expanded(
-            child: ListView.builder(
-              itemCount: membros.length,
-              itemBuilder: (context, index) {
-                return ListTile(
-                  contentPadding:
-                  EdgeInsets.symmetric(vertical: 4, horizontal: 16),
-                  title: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text('${membros[index].nome}'),
-                      Checkbox(
-                        value: presencas[membros[index].id] ?? false,
-                        onChanged: (value) {
-                          if (membros[index].id != null) {
-                            _atualizarPresenca(
-                              membros[index].id!,
-                              _formatDate(currentDate),
-                              value ?? false,
-                            );
-                          }
-                        },
-                      ),
-                    ],
+              SizedBox(height: 8),
+              Container(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    setState(() {
+                      presencas.forEach((key, value) {
+                        presencas[key] = !value;
+                      });
+                    });
+                  },
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.zero,
+                    ),
                   ),
-                );
-              },
-            ),
+                  child: Text('Marcar/Desmarcar Todas as Presenças'),
+                ),
+              ),
+              SizedBox(height: 8),
+              Expanded(
+                child: ListView.builder(
+                  itemCount: membros.length,
+                  itemBuilder: (context, index) {
+                    return ListTile(
+                      contentPadding:
+                      EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+                      title: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('${membros[index].nome}'),
+                          Checkbox(
+                            value: presencas[membros[index].id] ?? false,
+                            onChanged: (value) {
+                              if (membros[index].id != null) {
+                                _atualizarPresenca(
+                                  membros[index].id!,
+                                  _formatDate(currentDate),
+                                  value ?? false,
+                                );
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -354,6 +386,7 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
       initialDate: currentDate,
       firstDate: DateTime(2000),
       lastDate: DateTime.now(),
+      locale: const Locale("pt", "BR"), // Definindo o idioma como português do Brasil
     );
 
     if (pickedDate != null && pickedDate != currentDate) {
@@ -371,4 +404,6 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
   String _formatDate(DateTime date) {
     return DateFormat('dd-MM-yyyy').format(date);
   }
+
+
 }
