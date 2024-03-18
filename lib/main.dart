@@ -10,7 +10,6 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'firebase_options.dart';
-import 'package:flutter/cupertino.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -34,20 +33,22 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         primarySwatch: Colors.green,
       ),
-      home: ListarMembros(),
-      localizationsDelegates: [
+      home: const ListarMembros(),
+      localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ], // Use DefaultMaterialLocalizations.delegate instead of GlobalMaterialLocalizations.delegate
-      supportedLocales: [
-        const Locale('pt'), // Specify the supported locales
+      supportedLocales: const [
+        Locale('pt'), // Specify the supported locales
       ],
     );
   }
 }
 
 class ListarMembros extends StatefulWidget {
+  const ListarMembros({Key? key}) : super(key: key);
+
   @override
   _ListarMembrosState createState() => _ListarMembrosState();
 }
@@ -57,7 +58,7 @@ class _ListarMembrosState extends State<ListarMembros> {
   FirebaseDatabase.instance.reference().child('membros');
   List<Membro> membros = [];
   List<Membro> membrosAniversariantes = [];
-  TextEditingController _searchController = TextEditingController();
+  final TextEditingController _searchController = TextEditingController();
   late PageController _pageController;
   int _currentPage = 0;
 
@@ -140,14 +141,14 @@ class _ListarMembrosState extends State<ListarMembros> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Controle Presença CEDRINHO'),
+        title: const Text('Controle Presença CEDRINHO'),
       ),
-      drawer: MenuLateral(),
+      drawer: const MenuLateral(),
       body: SingleChildScrollView(
         child: Column(
           children: [
             _buildCarrossel(),
-            SizedBox(height: 10),
+            const SizedBox(height: 10),
             _buildAniversariantesList(),
           ],
         ),
@@ -183,7 +184,7 @@ class _ListarMembrosState extends State<ListarMembros> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text(
+        const Text(
           'Aniversariantes do Mês',
           textAlign: TextAlign.center,
           style: TextStyle(
@@ -191,14 +192,14 @@ class _ListarMembrosState extends State<ListarMembros> {
             fontSize: 24, // Altere o tamanho da fonte conforme necessário
           ),
         ),
-        SizedBox(height: 10),
+        const SizedBox(height: 10),
         ...membrosAniversariantes.map((membro) {
           return _buildBirthdayCard(
             membro.nome,
             _formatDate(membro.dataAniversario),
             membro.foto, // Passa o caminho da foto do membro
           );
-        }).toList(),
+        }),
       ],
     );
   }
@@ -215,7 +216,7 @@ class _ListarMembrosState extends State<ListarMembros> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text('Aniversário em $birthday'),
-            Icon(Icons.cake), // Ícone de bolo
+            const Icon(Icons.cake), // Ícone de bolo
           ],
         ),
       ),
@@ -230,7 +231,7 @@ class _ListarMembrosState extends State<ListarMembros> {
           ? NetworkImage(fotoPath)
           : null,
       child: fotoPath == null
-          ? Icon(Icons.person, size: 60, color: Colors.white)
+          ? const Icon(Icons.person, size: 60, color: Colors.white)
           : null,
     );
   }
@@ -242,7 +243,7 @@ class _ListarMembrosState extends State<ListarMembros> {
   }
 
   void _startAutoScroll() {
-    Timer.periodic(Duration(seconds: 3), (timer) {
+    Timer.periodic(const Duration(seconds: 3), (timer) {
       if (_pageController.hasClients) {
         if (_currentPage < 1) {
           _currentPage++;
@@ -251,7 +252,7 @@ class _ListarMembrosState extends State<ListarMembros> {
         }
         _pageController.animateToPage(
           _currentPage,
-          duration: Duration(milliseconds: 500),
+          duration: const Duration(milliseconds: 500),
           curve: Curves.easeInOut,
         );
       }

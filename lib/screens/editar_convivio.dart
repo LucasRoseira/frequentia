@@ -8,7 +8,7 @@ import 'package:image_picker/image_picker.dart';
 class EditarConvivioScreen extends StatefulWidget {
   final Map<String, dynamic> convivio;
 
-  EditarConvivioScreen({required this.convivio});
+  const EditarConvivioScreen({Key? key, required this.convivio}) : super(key: key);
 
   @override
   _EditarConvivioScreenState createState() => _EditarConvivioScreenState();
@@ -23,8 +23,12 @@ class _EditarConvivioScreenState extends State<EditarConvivioScreen> {
 
   final DatabaseReference _conviviosReference =
   FirebaseDatabase.instance.reference().child('convivios');
+  final DatabaseReference _membrosReference =
+  FirebaseDatabase.instance.reference().child('membros');
   final FirebaseStorage _storage = FirebaseStorage.instance;
   File? _novaFoto;
+
+  List<String> _responsaveis = [];
 
   @override
   void initState() {
@@ -32,17 +36,17 @@ class _EditarConvivioScreenState extends State<EditarConvivioScreen> {
     _nomeController.text = widget.convivio['nome'];
     _enderecoController.text = widget.convivio['endereco'];
     _diaController.text = widget.convivio['dia'];
-    _carregarResponsaveis(); // Carregar os responsáveis ao iniciar a tela
+    _carregarResponsaveis();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Editar Convívio'),
+        title: const Text('Editar Convívio'),
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -51,52 +55,75 @@ class _EditarConvivioScreenState extends State<EditarConvivioScreen> {
               backgroundImage: NetworkImage(widget.convivio['foto']),
             ),
             IconButton(
-              icon: Icon(Icons.edit),
+              icon: const Icon(Icons.edit),
               onPressed: _selecionarNovaFoto,
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             TextField(
               controller: _nomeController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Nome do Convívio',
                 labelStyle: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             TextField(
               controller: _enderecoController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Endereço do Convívio',
                 labelStyle: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             TextField(
               controller: _diaController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Dia do Convívio (ex: Segunda-feira)',
                 labelStyle: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             TextField(
-              // Campo para exibir os responsáveis
               controller: _responsaveisController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Responsáveis pelo Convívio',
                 labelStyle: TextStyle(fontWeight: FontWeight.bold),
               ),
+              readOnly: true,
+              onTap: () {
+                _mostrarDialogSelecaoResponsaveis();
+              },
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
+            ListView.builder(
+              shrinkWrap: true,
+              itemCount: _responsaveis.length,
+              itemBuilder: (context, index) {
+                final responsavel = _responsaveis[index];
+                return ListTile(
+                  title: Text(responsavel),
+                  trailing: IconButton(
+                    icon: Icon(Icons.close),
+                    onPressed: () {
+                      setState(() {
+                        _responsaveis.removeAt(index);
+                      });
+                    },
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
             ElevatedButton(
               onPressed: _salvarEdicao,
-              child: Text('Salvar Alterações'),
+              child: const Text('Salvar Alterações'),
             ),
           ],
         ),
       ),
     );
   }
+
 
   void _salvarEdicao() async {
     String convivioId = widget.convivio['id'];
@@ -111,17 +138,89 @@ class _EditarConvivioScreenState extends State<EditarConvivioScreen> {
     _conviviosReference.child(convivioId).update(convivioData);
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      const SnackBar(
         content: Text('Convívio atualizado com sucesso.'),
         duration: Duration(seconds: 2),
       ),
     );
   }
 
-  void _carregarResponsaveis() {
-    // Aqui você pode adicionar lógica para carregar os responsáveis do convívio e preencher o campo correspondente
-    // Por exemplo, você pode consultar o banco de dados para obter os responsáveis associados a este convívio e exibi-los no campo de texto
-    // Como essa funcionalidade não foi implementada neste código, este método está vazio
+  void _carregarResponsaveis() async {
+    List<String> responsaveisIds = List<String>.from(widget.convivio['responsaveis']);
+    _responsaveis.clear(); // Limpa a lista antes de carregar os responsáveis
+    _responsaveisController.clear(); // Limpa o controlador também
+
+    print('Responsável adicionado à lista teste'); // Mensagem de debug
+    print('Quantidade de responsáveis IDs: ${responsaveisIds.length}');
+    print('IDs dos responsáveis: $responsaveisIds');
+
+
+
+    for (String responsavelId in responsaveisIds) {
+      try {
+        DatabaseEvent membroEvent = await _membrosReference.child(responsavelId).once();
+        DataSnapshot membroSnapshot = membroEvent.snapshot;
+
+        if (membroSnapshot.value != null) {
+          Map<dynamic, dynamic>? membroData = membroSnapshot.value as Map<dynamic, dynamic>?;
+
+          if (membroData != null) {
+            print('Responsável carregado: ${membroData['nome']}'); // Mensagem de debug
+            setState(() {
+              _responsaveis.add(membroData['nome']);
+              _responsaveisController.text += '${membroData['nome']}, '; // Adiciona o nome ao controlador
+              print('Responsável adicionado à lista: ${membroData['nome']}'); // Mensagem de debug
+            });
+          }
+        }
+      } catch (error) {
+        print('Erro ao carregar responsável: $error');
+      }
+    }
+
+    print('Quantidade de responsáveis carregados: ${_responsaveis.length}');
+
+  }
+
+
+
+
+  void _mostrarDialogSelecaoResponsaveis() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Selecionar Responsáveis'),
+        content: SingleChildScrollView(
+          child: Column(
+            children: [
+              for (String responsavel in _responsaveis)
+                CheckboxListTile(
+                  title: Text(responsavel),
+                  value: _responsaveisController.text.contains(responsavel),
+                  onChanged: (bool? value) {
+                    setState(() {
+                      if (value != null && value) {
+                        _responsaveisController.text += responsavel + ', ';
+                      } else {
+                        _responsaveisController.text =
+                            _responsaveisController.text.replaceAll(responsavel + ', ', '');
+                      }
+                    });
+                  },
+                ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: const Text('Fechar'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _selecionarNovaFoto() async {
@@ -133,8 +232,6 @@ class _EditarConvivioScreenState extends State<EditarConvivioScreen> {
       });
     }
   }
-
-
 
   void _uploadNovaFoto() async {
     if (_novaFoto != null) {
@@ -166,14 +263,14 @@ class _EditarConvivioScreenState extends State<EditarConvivioScreen> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('Nova foto do convívio atualizada com sucesso.'),
           duration: Duration(seconds: 2),
         ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('Nenhuma nova foto selecionada.'),
           duration: Duration(seconds: 2),
         ),

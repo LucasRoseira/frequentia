@@ -3,6 +3,8 @@ import 'package:contador/screens/editar_convivio.dart';
 import 'package:firebase_database/firebase_database.dart';
 
 class ListaConvivios extends StatefulWidget {
+  const ListaConvivios({Key? key}) : super(key: key);
+
   @override
   _ListaConviviosState createState() => _ListaConviviosState();
 }
@@ -61,7 +63,6 @@ class _ListaConviviosState extends State<ListaConvivios> {
               }
             }
 
-            print('URL da foto do convívio: ${value['foto']}');
 
             listaConvivios.add({
               'id': key,
@@ -88,7 +89,7 @@ class _ListaConviviosState extends State<ListaConvivios> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Lista de Convívios'),
+        title: const Text('Lista de Convívios'),
       ),
       body: Stack(
         children: [
@@ -98,11 +99,11 @@ class _ListaConviviosState extends State<ListaConvivios> {
               height: double.infinity,
               decoration: BoxDecoration(
                 image: DecorationImage(
-                  image: AssetImage("assets/acesso.jpg"),
+                  image: const AssetImage("assets/acesso.jpg"),
                   fit: BoxFit.contain,
                   alignment: Alignment.center,
                   colorFilter: ColorFilter.mode(
-                    Colors.black.withOpacity(0.02),
+                    Colors.black.withOpacity(0.03),
                     BlendMode.dstATop,
                   ),
                 ),
@@ -120,8 +121,6 @@ class _ListaConviviosState extends State<ListaConvivios> {
 
 
 
-
-
   Widget _buildListaConvivios() {
     return ListView.builder(
       itemCount: _convivios.length,
@@ -129,27 +128,64 @@ class _ListaConviviosState extends State<ListaConvivios> {
         return ListTile(
           leading: _buildFotoConvivio(
               _convivios[index]['foto']), // Miniatura da foto do convívio
-          title: Text('Nome: ${_convivios[index]['nome']}'), // Nome do convívio
+          title: Row(
+            children: [
+              Text(
+                'Nome: ',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              Text('${_convivios[index]['nome']}'),
+            ],
+          ),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Endereço: ${_convivios[index]['endereco']}'),
-              Text('Dia: ${_convivios[index]['dia']}'),
-              Text(
-                  'Responsáveis: ${_convivios[index]['responsaveis'].join(', ')}'),
+              Row(
+                children: [
+                  Text(
+                    'Endereço: ',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Text('${_convivios[index]['endereco']}'),
+                ],
+              ),
+              Row(
+                children: [
+                  Text(
+                    'Dia: ',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Text('${_convivios[index]['dia']}'),
+                ],
+              ),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Responsáveis: ',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Expanded(
+                    child: Text(
+                      '${_convivios[index]['responsaveis'].join(', ')}',
+                      softWrap: true,
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
           trailing: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
-                icon: Icon(Icons.edit),
+                icon: const Icon(Icons.edit),
                 onPressed: () {
                   _editarConvivio(_convivios[index]);
                 },
               ),
               IconButton(
-                icon: Icon(Icons.delete),
+                icon: const Icon(Icons.delete),
                 onPressed: () {
                   _excluirConvivio(_convivios[index]);
                 },
@@ -164,6 +200,7 @@ class _ListaConviviosState extends State<ListaConvivios> {
     );
   }
 
+
   Widget _buildFotoConvivio(String? fotoPath) {
     // Verifica se a URL da foto é válida
     if (fotoPath != null && fotoPath.isNotEmpty) {
@@ -173,7 +210,7 @@ class _ListaConviviosState extends State<ListaConvivios> {
       );
     } else {
       // Caso contrário, exibe um ícone padrão
-      return CircleAvatar(
+      return const CircleAvatar(
         radius: 30,
         child: Icon(Icons.group, size: 60, color: Colors.white), // Ícone padrão para convívio
       );
@@ -202,7 +239,7 @@ class _ListaConviviosState extends State<ListaConvivios> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('Convívio excluído com sucesso.'),
           duration: Duration(seconds: 2),
         ),
@@ -210,7 +247,7 @@ class _ListaConviviosState extends State<ListaConvivios> {
     } catch (error) {
       print('Erro ao excluir convívio: $error');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('Erro ao excluir convívio. Tente novamente.'),
           duration: Duration(seconds: 2),
         ),

@@ -1,13 +1,11 @@
-  import 'dart:io';
-  import 'package:firebase_storage/firebase_storage.dart';
   import 'package:flutter/material.dart';
-  import 'package:image_picker/image_picker.dart';
   import 'package:intl/intl.dart';
   import 'package:firebase_database/firebase_database.dart';
   import 'package:contador/models/membro.dart';
-  import 'package:contador/screens/cadastrar_membro.dart';
 
   class ListarMembros extends StatefulWidget {
+  const ListarMembros({Key? key}) : super(key: key);
+
     @override
     _ListarMembrosState createState() => _ListarMembrosState();
   }
@@ -20,7 +18,7 @@
     List<Membro> membros = [];
     List<Membro> membrosFiltrados = [];
     List<String> convivios = [];
-    TextEditingController _searchController = TextEditingController();
+    final TextEditingController _searchController = TextEditingController();
     String? _selectedConvivio;
 
     // Adicionar campos para armazenar o ID e o nome do membro selecionado
@@ -127,7 +125,7 @@
     Widget build(BuildContext context) {
       return Scaffold(
         appBar: AppBar(
-          title: Text('Listagem de Membros'),
+          title: const Text('Listagem de Membros'),
         ),
         body: Stack(
           children: [
@@ -136,11 +134,11 @@
               height: double.infinity,
               decoration: BoxDecoration(
                 image: DecorationImage(
-                  image: AssetImage("assets/acesso.jpg"),
+                  image: const AssetImage("assets/acesso.jpg"),
                   fit: BoxFit.contain,
                   alignment: Alignment.center,
                   colorFilter: ColorFilter.mode(
-                    Colors.black.withOpacity(0.02),
+                    Colors.black.withOpacity(0.03),
                     BlendMode.dstATop,
                   ),
                 ),
@@ -152,11 +150,11 @@
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   _buildPesquisaMembroField(),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   DropdownButtonFormField<String>(
                     value: _selectedConvivio,
                     items: [
-                      DropdownMenuItem<String>(
+                      const DropdownMenuItem<String>(
                         value: null,
                         child: Text('Todos os Convívios'),
                       ),
@@ -167,7 +165,7 @@
                             future: _getConvivioName(convivioId), // Chama a função para obter o nome do convívio
                             builder: (context, snapshot) {
                               if (snapshot.connectionState == ConnectionState.waiting) {
-                                return Text('Carregando...'); // Exibe mensagem de carregamento enquanto espera pelo nome do convívio
+                                return const Text('Carregando...'); // Exibe mensagem de carregamento enquanto espera pelo nome do convívio
                               } else {
                                 String convivioNome = snapshot.data ?? 'Nenhum convívio';
                                 return Text(convivioNome);
@@ -175,7 +173,7 @@
                             },
                           ),
                         );
-                      }).toList(),
+                      }),
                     ],
                     onChanged: (String? newValue) {
                       if (mounted) {
@@ -201,7 +199,7 @@
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               _buildFotoMembro(membrosFiltrados[index].foto),
-                              SizedBox(height: 8),
+                              const SizedBox(height: 8),
                               Text('Nome: ${membrosFiltrados[index].nome}'),
                               Text(
                                   'Data de Aniversário: ${_formatDate(membrosFiltrados[index].dataAniversario)}'),
@@ -213,7 +211,7 @@
                                 future: _getConvivioName(membrosFiltrados[index].convivio ?? ''),
                                 builder: (context, snapshot) {
                                   if (snapshot.connectionState == ConnectionState.waiting) {
-                                    return Text('Convívio: Carregando...'); // Exibe mensagem de carregamento enquanto espera pelo nome do convívio
+                                    return const Text('Convívio: Carregando...'); // Exibe mensagem de carregamento enquanto espera pelo nome do convívio
                                   } else {
                                     String convivioNome = snapshot.data ?? 'Nenhum convívio';
                                     return Text('Convívio: $convivioNome');
@@ -228,7 +226,7 @@
                               mainAxisSize: MainAxisSize.min,
                               children: [
                                 IconButton(
-                                  icon: Icon(Icons.edit),
+                                  icon: const Icon(Icons.edit),
                                   onPressed: () {
                                     // Configurar o membro selecionado antes de editar
                                     _selectedMemberId = membrosFiltrados[index].id;
@@ -237,7 +235,7 @@
                                   },
                                 ),
                                 IconButton(
-                                  icon: Icon(Icons.delete),
+                                  icon: const Icon(Icons.delete),
                                   onPressed: () {
                                     _excluirMembro(membrosFiltrados[index]);
                                   },
@@ -291,7 +289,7 @@
           onChanged: _filtrarMembros,
           decoration: InputDecoration(
             labelText: 'Pesquisar Membro',
-            prefixIcon: Icon(Icons.search),
+            prefixIcon: const Icon(Icons.search),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(10),
             ),
@@ -305,7 +303,7 @@
         radius: 30,
         backgroundImage: fotoPath != null ? NetworkImage(fotoPath) : null,
         child: fotoPath == null
-            ? Icon(Icons.person, size: 60, color: Colors.white)
+            ? const Icon(Icons.person, size: 60, color: Colors.white)
             : null,
       );
     }
@@ -385,13 +383,13 @@
 
 
 
-    EditarMembroScreen({
+    const EditarMembroScreen({Key? key, 
       required this.membro,
       required this.databaseReference,
       required this.convivios,
       this.selectedMemberId,
       this.selectedMemberName,
-    });
+    }) : super(key: key);
 
     @override
     _EditarMembroScreenState createState() => _EditarMembroScreenState();
@@ -431,7 +429,7 @@
         future: _getConvivioName(widget.membro.convivio ?? ''),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return CircularProgressIndicator();
+            return const CircularProgressIndicator();
           } else {
             String? convivioNome = snapshot.data;
 
@@ -459,7 +457,7 @@
                   });
                 }
               },
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Convívio',
               ),
             );
@@ -470,7 +468,7 @@
 
 
 
-    Map<String, String> _convivioNames = {};
+    final Map<String, String> _convivioNames = {};
 
     Future<void> _carregarNomesConvivios() async {
       try {
@@ -497,7 +495,7 @@
     Widget build(BuildContext context) {
       return Scaffold(
         appBar: AppBar(
-          title: Text('Editar Membro'),
+          title: const Text('Editar Membro'),
         ),
         body: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -521,7 +519,7 @@
                       borderRadius: BorderRadius.circular(8.0), // Define a borda retangular
                     ),
                   ),
-                  child: Text('Salvar Alterações'),
+                  child: const Text('Salvar Alterações'),
                 ),
               ),
             ],
@@ -534,7 +532,7 @@
     Widget _buildNomeField() {
       return TextFormField(
         controller: _nomeController,
-        decoration: InputDecoration(labelText: 'Nome'),
+        decoration: const InputDecoration(labelText: 'Nome'),
       );
     }
 
@@ -544,7 +542,7 @@
           _selecionarData(context);
         },
         child: InputDecorator(
-          decoration: InputDecoration(
+          decoration: const InputDecoration(
             labelText: 'Data de Nascimento',
           ),
           child: Row(
@@ -554,7 +552,7 @@
               Text(
                 _formatDate(widget.membro.dataAniversario),
               ),
-              Icon(Icons.calendar_today),
+              const Icon(Icons.calendar_today),
             ],
           ),
         ),
@@ -583,21 +581,21 @@
     Widget _buildTipoMembroField() {
       return TextFormField(
         controller: _tipoMembroController,
-        decoration: InputDecoration(labelText: 'Tipo de Membro'),
+        decoration: const InputDecoration(labelText: 'Tipo de Membro'),
       );
     }
 
     Widget _buildEnderecoField() {
       return TextFormField(
         controller: _enderecoController,
-        decoration: InputDecoration(labelText: 'Endereço'),
+        decoration: const InputDecoration(labelText: 'Endereço'),
       );
     }
 
     Widget _buildFotoField() {
       return TextFormField(
         controller: _fotoController,
-        decoration: InputDecoration(labelText: 'Caminho da Foto'),
+        decoration: const InputDecoration(labelText: 'Caminho da Foto'),
       );
     }
 
@@ -673,7 +671,7 @@
 
         // Mostrar uma mensagem de sucesso
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Text('Alterações salvas com sucesso!'),
             duration: Duration(seconds: 2),
           ),
@@ -685,7 +683,7 @@
         // Mostrar uma mensagem de erro
         print('Erro ao salvar alterações: $error');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Text('Erro ao salvar alterações. Tente novamente.'),
             duration: Duration(seconds: 2),
           ),

@@ -116,8 +116,8 @@ class DatabaseHelper {
   Future<List<DateTime>> queryAllAttendanceDates() async {
     try {
       QuerySnapshot querySnapshot = await attendances.get();
-      Set<DateTime> dates = Set();
-      querySnapshot.docs.forEach((doc) {
+      Set<DateTime> dates = {};
+      for (var doc in querySnapshot.docs) {
         String dateString = doc['date'];
         try {
           DateTime date = DateFormat('dd/MM/yyyy').parse(dateString);
@@ -125,7 +125,7 @@ class DatabaseHelper {
         } catch (e) {
           print('Error parsing date: $dateString');
         }
-      });
+      }
       return dates.toList();
     } catch (e) {
       print('Error querying all attendance dates: $e');

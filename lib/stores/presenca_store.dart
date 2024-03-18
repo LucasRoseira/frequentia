@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:contador/data/database_helper.dart';
 import 'package:contador/models/membro.dart';
 import 'package:contador/models/presenca.dart';

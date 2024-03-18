@@ -1,25 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:intl/intl.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:contador/models/membro.dart';
-import 'package:contador/models/presenca.dart';
-import 'dart:io';
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return const MaterialApp(
       home: ListarPresencas(),
     );
   }
 }
 
 class ListarPresencas extends StatefulWidget {
+  const ListarPresencas({Key? key}) : super(key: key);
+
   @override
   _ListarPresencasState createState() => _ListarPresencasState();
 }
@@ -31,7 +32,7 @@ class _ListarPresencasState extends State<ListarPresencas> {
   List<String> datas = [];
   List<Membro> membros = [];
   List<Membro> membrosFiltrados = [];
-  TextEditingController _controller = TextEditingController();
+  final TextEditingController _controller = TextEditingController();
 
   @override
   void initState() {
@@ -44,7 +45,7 @@ class _ListarPresencasState extends State<ListarPresencas> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Listar Presenças'),
+        title: const Text('Listar Presenças'),
       ),
       body: Stack(
         children: [
@@ -54,11 +55,11 @@ class _ListarPresencasState extends State<ListarPresencas> {
                 height: double.infinity,
                 decoration: BoxDecoration(
                   image: DecorationImage(
-                    image: AssetImage("assets/acesso.jpg"),
+                    image: const AssetImage("assets/acesso.jpg"),
                     fit: BoxFit.contain,
                     alignment: Alignment.center,
                     colorFilter: ColorFilter.mode(
-                      Colors.black.withOpacity(0.02),
+                      Colors.black.withOpacity(0.03),
                       BlendMode.dstATop,
                         ),
                 ),
@@ -76,7 +77,7 @@ class _ListarPresencasState extends State<ListarPresencas> {
                   },
                   decoration: InputDecoration(
                     labelText: 'Filtrar por nome',
-                    prefixIcon: Icon(Icons.search),
+                    prefixIcon: const Icon(Icons.search),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(8.0),
                     ),
@@ -104,7 +105,7 @@ class _ListarPresencasState extends State<ListarPresencas> {
       columnSpacing: 20.0,
       columns: [
         DataColumn(
-          label: Text(
+          label: const Text(
             'Nome',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
@@ -116,13 +117,13 @@ class _ListarPresencasState extends State<ListarPresencas> {
             });
           },
         ),
-        DataColumn(
+        const DataColumn(
           label: Text(
             'Presenças',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
           ),
         ),
-        DataColumn(
+        const DataColumn(
           label: Text(
             'Porcentagem',
             style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -132,7 +133,7 @@ class _ListarPresencasState extends State<ListarPresencas> {
               (data) => DataColumn(
             label: Text(
               data,
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
           ),
         ),
@@ -143,7 +144,7 @@ class _ListarPresencasState extends State<ListarPresencas> {
             DataCell(
               Text(
                 membro.nome,
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
               ),
             ),
             DataCell(
@@ -151,9 +152,9 @@ class _ListarPresencasState extends State<ListarPresencas> {
                 future: _contarPresencas(membro.id ?? ''),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return CircularProgressIndicator();
+                    return const CircularProgressIndicator();
                   } else if (snapshot.hasError) {
-                    return Text('Erro ao contar presenças');
+                    return const Text('Erro ao contar presenças');
                   } else {
                     int presencas = snapshot.data?['presencas'] ?? 0;
 
@@ -167,9 +168,9 @@ class _ListarPresencasState extends State<ListarPresencas> {
                 future: _contarPresencas(membro.id ?? ''),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return CircularProgressIndicator();
+                    return const CircularProgressIndicator();
                   } else if (snapshot.hasError) {
-                    return Text('Erro ao contar presenças');
+                    return const Text('Erro ao contar presenças');
                   } else {
                     double porcentagem =
                         snapshot.data?['porcentagem'] ?? 0.0;
@@ -190,9 +191,9 @@ class _ListarPresencasState extends State<ListarPresencas> {
                     builder: (context, snapshot) {
                       if (snapshot.connectionState ==
                           ConnectionState.waiting) {
-                        return CircularProgressIndicator();
+                        return const CircularProgressIndicator();
                       } else if (snapshot.hasError) {
-                        return Text('Erro ao verificar presença');
+                        return const Text('Erro ao verificar presença');
                       } else {
                         bool presente = snapshot.data ?? false;
                         return Text(
@@ -341,7 +342,7 @@ class _ListarPresencasState extends State<ListarPresencas> {
 
   DateTime _parseDate(String date) {
     // Verifica se a data é nula ou vazia
-    if (date == null || date.isEmpty) {
+    if (date.isEmpty) {
       // Retorna uma data padrão ou lança uma exceção, dependendo do seu caso
       return DateTime.now();
     }

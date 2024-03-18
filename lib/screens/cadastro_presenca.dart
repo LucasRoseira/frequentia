@@ -7,21 +7,23 @@ import 'package:intl/date_symbol_data_local.dart'; // Importe este pacote
 
 void main() {
   initializeDateFormatting('pt_BR', null).then((_) { // Inicialize os dados de localização antes de rodar o app
-    runApp(MyApp());
+    runApp(const MyApp());
   });
 }
 
 
 class MyApp extends StatelessWidget {
+  const MyApp({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return const MaterialApp(
       localizationsDelegates: [
         GlobalMaterialLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
       ], // Use DefaultMaterialLocalizations.delegate instead of GlobalMaterialLocalizations.delegate
       supportedLocales: [
-        const Locale('pt'), // Specify the supported locales
+        Locale('pt'), // Specify the supported locales
       ],
       home: CadastroPresenca(),
     );
@@ -30,6 +32,8 @@ class MyApp extends StatelessWidget {
 
 
 class CadastroPresenca extends StatefulWidget {
+  const CadastroPresenca({Key? key}) : super(key: key);
+
   @override
   _CadastroPresencaState createState() => _CadastroPresencaState();
 }
@@ -86,7 +90,7 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Cadastro de Presença'),
+        title: const Text('Cadastro de Presença'),
       ),
       body: Stack(
         children: [
@@ -96,11 +100,11 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
                 height: double.infinity,
                 decoration: BoxDecoration(
                   image: DecorationImage(
-                    image: AssetImage("assets/acesso.jpg"),
+                    image: const AssetImage("assets/acesso.jpg"),
                     fit: BoxFit.contain,
                     alignment: Alignment.center,
                     colorFilter: ColorFilter.mode(
-                      Colors.black.withOpacity(0.02),
+                      Colors.black.withOpacity(0.03),
                       BlendMode.dstATop,
                         ),
                         ),
@@ -109,8 +113,8 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
                   ),
           Column(
             children: [
-              Padding(
-                padding: const EdgeInsets.all(8.0),
+              const Padding(
+                padding: EdgeInsets.all(8.0),
               ),
               InkWell(
                 onTap: () {
@@ -119,17 +123,17 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.calendar_today),
-                    SizedBox(width: 4),
+                    const Icon(Icons.calendar_today),
+                    const SizedBox(width: 4),
                     Text(
                       _formatDate(currentDate),
-                      style: TextStyle(fontSize: 16),
+                      style: const TextStyle(fontSize: 16),
                     ),
                   ],
                 ),
               ),
-              SizedBox(height: 8),
-              Container(
+              const SizedBox(height: 8),
+              SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
@@ -140,25 +144,25 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
                     });
                   },
                   style: ElevatedButton.styleFrom(
-                    shape: RoundedRectangleBorder(
+                    shape: const RoundedRectangleBorder(
                       borderRadius: BorderRadius.zero,
                     ),
                   ),
-                  child: Text('Marcar/Desmarcar Todas as Presenças'),
+                  child: const Text('Marcar/Desmarcar Todas as Presenças'),
                 ),
               ),
-              SizedBox(height: 8),
+              const SizedBox(height: 8),
               Expanded(
                 child: ListView.builder(
                   itemCount: membros.length,
                   itemBuilder: (context, index) {
                     return ListTile(
                       contentPadding:
-                      EdgeInsets.symmetric(vertical: 4, horizontal: 16),
+                      const EdgeInsets.symmetric(vertical: 4, horizontal: 16),
                       title: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('${membros[index].nome}'),
+                          Text(membros[index].nome),
                           Checkbox(
                             value: presencas[membros[index].id] ?? false,
                             onChanged: (value) {
@@ -186,21 +190,21 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
           await _mostrarDatePicker(context);
         },
         tooltip: 'Selecionar Data',
-        child: Icon(Icons.calendar_today),
+        child: const Icon(Icons.calendar_today),
       ),
       persistentFooterButtons: [
-        Container(
+        SizedBox(
           width: double.infinity,
           child: ElevatedButton(
             onPressed: () {
               _salvarPresencas();
             },
             style: ElevatedButton.styleFrom(
-              shape: RoundedRectangleBorder(
+              shape: const RoundedRectangleBorder(
                 borderRadius: BorderRadius.zero,
               ),
             ),
-            child: Text('Salvar Presenças'),
+            child: const Text('Salvar Presenças'),
           ),
         ),
       ],
@@ -248,9 +252,9 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
             membros = listaMembros;
 
             // Carregar presenças para cada membro
-            membros.forEach((membro) {
+            for (var membro in membros) {
               _carregarPresencasMembro(membro.id!);
-            });
+            }
           });
         }
       }
@@ -270,14 +274,14 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
 
         Map<String, bool> loadedPresencas = {};
 
-        membros.forEach((membro) {
+        for (var membro in membros) {
           String memberId = membro.id ?? '';
           bool hasAttendance = values['members']?.contains(memberId) ?? false;
 
           print('Membro: $memberId, Tem Presença: $hasAttendance');
 
           loadedPresencas[memberId] = hasAttendance;
-        });
+        }
 
         print('Presenças carregadas: $loadedPresencas');
 
@@ -290,9 +294,9 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
       } else {
         // Se não houver presenças para a data, definir todos os checkboxes como falso
         Map<String, bool> emptyPresencas = {};
-        membros.forEach((membro) {
+        for (var membro in membros) {
           emptyPresencas[membro.id ?? ''] = false;
-        });
+        }
 
         setState(() {
           presencas = emptyPresencas;
@@ -364,7 +368,7 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('Presenças salvas com sucesso!'),
           duration: Duration(seconds: 2),
         ),
@@ -372,7 +376,7 @@ class _CadastroPresencaState extends State<CadastroPresenca> {
     } catch (error) {
       print('Erro ao salvar presenças: $error');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('Erro ao salvar presenças. Tente novamente.'),
           duration: Duration(seconds: 2),
         ),

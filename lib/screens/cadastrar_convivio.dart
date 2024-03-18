@@ -5,9 +5,10 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:contador/models/membro.dart';
-import 'package:contador/models/convivio.dart';
 
 class CadastrarConvivio extends StatefulWidget {
+  const CadastrarConvivio({Key? key}) : super(key: key);
+
   @override
   _CadastrarConvivioState createState() => _CadastrarConvivioState();
 }
@@ -106,74 +107,96 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Cadastrar Convívio'),
+        title: const Text('Cadastrar Convívio'),
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildAvatarSelector(), // Avatar para selecionar a foto
-            SizedBox(height: 16),
-            _buildNomeConvivioField(), // Adicionando campo para nome do convívio
-            SizedBox(height: 16),
-            _buildResponsaveisField(),
-            SizedBox(height: 16),
-            _buildEnderecoField(),
-            SizedBox(height: 16),
-            _buildDiaField(),
-            SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        _salvarConvivio();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.zero,
-                        ),
-                        minimumSize: Size(double.infinity, 40),
-                      ),
-                      child: Text(
-                        'Salvar Convívio',
-                      ),
-                    ),
+      body: Stack(
+        children: [
+          Center(
+            child: Container(
+              width: double.infinity,
+              height: double.infinity,
+              decoration: BoxDecoration(
+                image: DecorationImage(
+                  image: const AssetImage("assets/acesso.jpg"),
+                  fit: BoxFit.contain,
+                  alignment: Alignment.center,
+                  colorFilter: ColorFilter.mode(
+                    Colors.black.withOpacity(0.03),
+                    BlendMode.dstATop,
                   ),
                 ),
-                SizedBox(width: 16),
-                Expanded(
-                  child: Container(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        _visualizarDados();
-                      },
-                      style: ElevatedButton.styleFrom(
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.zero,
+              ),
+            ),
+          ),
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildAvatarSelector(), // Avatar para selecionar a foto
+                const SizedBox(height: 16),
+                _buildNomeConvivioField(), // Adicionando campo para nome do convívio
+                const SizedBox(height: 16),
+                _buildResponsaveisField(),
+                const SizedBox(height: 16),
+                _buildEnderecoField(),
+                const SizedBox(height: 16),
+                _buildDiaField(),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            _salvarConvivio();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.zero,
+                            ),
+                            minimumSize: const Size(double.infinity, 40),
+                          ),
+                          child: const Text(
+                            'Salvar Convívio',
+                          ),
                         ),
-                        minimumSize: Size(double.infinity, 40),
-                        backgroundColor:
-                        Colors.blue, // Cor de fundo
-                      ),
-                      child: Text(
-                        'Visualizar Dados',
-                        style: TextStyle(color: Colors.white),
                       ),
                     ),
-                  ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () {
+                            _visualizarDados();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.zero,
+                            ),
+                            minimumSize: const Size(double.infinity, 40),
+                            backgroundColor:
+                            Colors.blue, // Cor de fundo
+                          ),
+                          child: const Text(
+                            'Visualizar Dados',
+                            style: TextStyle(color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
-      ),
+          ),
+        ], // Faltava essa vírgula
+      ), // Faltava esse fechamento
     );
   }
+
 
   // Método para construir o avatar seletor de foto
   Widget _buildAvatarSelector() {
@@ -203,7 +226,7 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
   Widget _buildNomeConvivioField() {
     return TextField(
       controller: _nomeController,
-      decoration: InputDecoration(
+      decoration: const InputDecoration(
         labelText: 'Nome do Convívio',
         labelStyle: TextStyle(fontWeight: FontWeight.bold),
       ),
@@ -214,20 +237,20 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        const Text(
           'Responsáveis',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 16,
           ),
         ),
-        SizedBox(height: 8),
+        const SizedBox(height: 8),
         _buildPesquisaMembroField(),
-        SizedBox(height: 8),
+        const SizedBox(height: 8),
         _pesquisaFocusNode.hasFocus
             ? _buildListaMembrosFiltrados()
-            : SizedBox.shrink(),
-        SizedBox(height: 8),
+            : const SizedBox.shrink(),
+        const SizedBox(height: 8),
         _buildListaResponsaveis(),
       ],
     );
@@ -249,11 +272,11 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
               borderRadius: BorderRadius.circular(8.0),
               border: Border.all(color: Colors.black),
             ),
-            padding: EdgeInsets.symmetric(horizontal: 8.0),
+            padding: const EdgeInsets.symmetric(horizontal: 8.0),
             child: TextFormField(
               focusNode: _pesquisaFocusNode,
               controller: _pesquisaController,
-              decoration: InputDecoration(
+              decoration: const InputDecoration(
                 labelText: 'Pesquisar Membro',
                 suffixIcon: Icon(Icons.search),
                 border: InputBorder.none,
@@ -266,7 +289,7 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
           ),
         ),
         AnimatedContainer(
-          duration: Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 300),
           height: (_pesquisaFocusNode.hasFocus && _membrosFiltrados.isNotEmpty)
               ? 200
               : 0,
@@ -286,7 +309,7 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
         return ListTile(
           title: Text(
             _membrosFiltrados[index].nome,
-            style: TextStyle(
+            style: const TextStyle(
               fontWeight: FontWeight.bold, // Adiciona negrito ao nome
             ),
           ),
@@ -301,7 +324,7 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
   Widget _buildEnderecoField() {
     return TextField(
       controller: _enderecoController,
-      decoration: InputDecoration(
+      decoration: const InputDecoration(
         labelText: 'Endereço do Convívio',
         labelStyle: TextStyle(fontWeight: FontWeight.bold),
       ),
@@ -314,7 +337,7 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
     List<String> diasDaSemana = ['Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'];
 
     return DropdownButtonFormField<String>(
-      decoration: InputDecoration(
+      decoration: const InputDecoration(
         labelText: 'Dia do Convívio',
         labelStyle: TextStyle(fontWeight: FontWeight.bold),
       ),
@@ -347,7 +370,7 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
                 child: Text(membro.nome),
               ),
               IconButton(
-                icon: Icon(Icons.clear),
+                icon: const Icon(Icons.clear),
                 onPressed: () {
                   _removerResponsavel(membro);
                 },
@@ -384,7 +407,7 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: Text('Membro já adicionado'),
+            title: const Text('Membro já adicionado'),
             content: Text(
               'O membro ${membro.nome} já foi adicionado como responsável.',
             ),
@@ -393,7 +416,7 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
                 onPressed: () {
                   Navigator.of(context).pop(); // Fechar o diálogo
                 },
-                child: Text('OK'),
+                child: const Text('OK'),
               ),
             ],
           );
@@ -407,14 +430,14 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Sucesso'),
+          title: const Text('Sucesso'),
           content: Text(mensagem),
           actions: <Widget>[
             TextButton(
               onPressed: () {
                 Navigator.of(context).pop();
               },
-              child: Text('OK'),
+              child: const Text('OK'),
             ),
           ],
         );
@@ -433,15 +456,15 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
         context: context,
         builder: (BuildContext context) {
           return AlertDialog(
-            title: Text('Campos obrigatórios não preenchidos'),
-            content: Text(
+            title: const Text('Campos obrigatórios não preenchidos'),
+            content: const Text(
                 'Preencha todos os campos obrigatórios e selecione uma foto.'),
             actions: [
               TextButton(
                 onPressed: () {
                   Navigator.of(context).pop(); // Fechar o diálogo
                 },
-                child: Text('OK'),
+                child: const Text('OK'),
               ),
             ],
           );
@@ -483,7 +506,7 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
 
     // Exibe uma mensagem de sucesso
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
+      const SnackBar(
         content: Text('Convívio salvo com sucesso!'),
         duration: Duration(seconds: 3),
       ),
@@ -530,14 +553,14 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
+        const Text(
           'Foto do Convívio',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 16,
           ),
         ),
-        SizedBox(height: 8),
+        const SizedBox(height: 8),
         _selectedImage != null
             ? Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -548,21 +571,21 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
               width: 200,
               fit: BoxFit.cover,
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Container(
               width: double.infinity,
-              padding: EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.symmetric(vertical: 8),
               child: TextButton(
                 onPressed: _selectPhoto,
                 style: TextButton.styleFrom(
-                  shape: RoundedRectangleBorder(
+                  shape: const RoundedRectangleBorder(
                     borderRadius: BorderRadius.zero,
                   ),
-                  minimumSize: Size(double.infinity, 40),
+                  minimumSize: const Size(double.infinity, 40),
                   backgroundColor:
                   Colors.blue, // Altere a cor de fundo conforme necessário
                 ),
-                child: Text(
+                child: const Text(
                   'Selecionar outra foto',
                   style: TextStyle(color: Colors.white),
                 ),
@@ -572,17 +595,17 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
         )
             : Container(
           width: double.infinity,
-          padding: EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: 8),
           child: ElevatedButton(
             onPressed: _selectPhoto,
             style: ElevatedButton.styleFrom(
-              shape: RoundedRectangleBorder(
+              shape: const RoundedRectangleBorder(
                 borderRadius: BorderRadius.zero,
               ),
-              minimumSize: Size(double.infinity, 40),
+              minimumSize: const Size(double.infinity, 40),
               // Altere a cor de fundo conforme necessário
             ),
-            child: Text(
+            child: const Text(
               'Selecionar foto',
             ),
           ),
@@ -610,7 +633,7 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: Text('Dados do Convívio'),
+          title: const Text('Dados do Convívio'),
           content: SingleChildScrollView(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -629,7 +652,7 @@ class _CadastrarConvivioState extends State<CadastrarConvivio> {
               onPressed: () {
                 Navigator.of(context).pop(); // Fechar o diálogo
               },
-              child: Text('OK'),
+              child: const Text('OK'),
             ),
           ],
         );

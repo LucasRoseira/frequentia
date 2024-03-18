@@ -6,123 +6,125 @@ import 'package:contador/screens/cadastro_presenca.dart';
 import 'package:contador/screens/listar_membros.dart';
 import 'package:contador/screens/listar_presencas.dart';
 import 'package:contador/screens/listar_convivios.dart'; // Importe a tela de lista de convívios
-import 'package:contador/screens/cadastrar_convivio.dart'; // Importe a tela de cadastro de presença de convívio
+// Importe a tela de cadastro de presença de convívio
 
 class MenuLateral extends StatelessWidget {
+  const MenuLateral({Key? key}) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
     return Drawer(
       child: ListView(
         children: [
           ListTile(
-            leading: Icon(
+            leading: const Icon(
               Icons.add_box,
               size: 32,
             ),
-            title: Text(
+            title: const Text(
               'Cadastrar Convívio',
               style: TextStyle(fontSize: 18),
             ),
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => CadastrarConvivio()),
+                MaterialPageRoute(builder: (context) => const CadastrarConvivio()),
               );
             },
           ),
           ListTile(
-            leading: ImageIcon(
+            leading: const ImageIcon(
               AssetImage('assets/icons/comparecimento.png'),
               size: 32,
             ),
-            title: Text(
+            title: const Text(
               'Visualizar Presença',
               style: TextStyle(fontSize: 18),
             ),
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => ListarPresencas()),
+                MaterialPageRoute(builder: (context) => const ListarPresencas()),
               );
             },
           ),
           ListTile(
-            leading: Icon(
+            leading: const Icon(
               Icons.add,
               size: 32,
             ),
-            title: Text(
+            title: const Text(
               'Cadastrar Membros',
               style: TextStyle(fontSize: 18),
             ),
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => CadastrarMembro()),
+                MaterialPageRoute(builder: (context) => const CadastrarMembro()),
               );
             },
           ),
           ListTile(
-            leading: Icon(
+            leading: const Icon(
               Icons.group,
               size: 32,
             ),
-            title: Text(
+            title: const Text(
               'Visualizar Membros',
               style: TextStyle(fontSize: 18),
             ),
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => ListarMembros()),
+                MaterialPageRoute(builder: (context) => const ListarMembros()),
               );
             },
           ),
           ListTile(
-            leading: Icon(
+            leading: const Icon(
               Icons.person_add,
               size: 32,
             ),
-            title: Text(
+            title: const Text(
               'Cadastrar Presença',
               style: TextStyle(fontSize: 18),
             ),
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => CadastroPresenca()),
+                MaterialPageRoute(builder: (context) => const CadastroPresenca()),
               );
             },
           ),
           ListTile(
-            leading: Icon(
+            leading: const Icon(
               Icons.event,
               size: 32,
             ),
-            title: Text(
+            title: const Text(
               'Cadastrar Presença Convívio',
               style: TextStyle(fontSize: 18),
             ),
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => CadastroPresencaConvivio()),
+                MaterialPageRoute(builder: (context) => const CadastroPresencaConvivio()),
               );
             },
           ),
           ListTile(
-            leading: Icon(
+            leading: const Icon(
               Icons.list,
               size: 32,
             ),
-            title: Text(
+            title: const Text(
               'Lista de Convívios',
               style: TextStyle(fontSize: 18),
             ),
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => ListaConvivios()),
+                MaterialPageRoute(builder: (context) => const ListaConvivios()),
               );
             },
           ),

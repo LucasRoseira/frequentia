@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:contador/main.dart'; // Importe o arquivo onde MyHomePage está definido
 
 class SplashScreen extends StatefulWidget {
+  const SplashScreen({Key? key}) : super(key: key);
+
   @override
   _SplashScreenState createState() => _SplashScreenState();
 }
@@ -14,11 +16,11 @@ class _SplashScreenState extends State<SplashScreen> {
 
     // Aguarda 3 segundos e navega para a próxima tela
     Timer(
-      Duration(seconds: 4),
+      const Duration(seconds: 4),
           () {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => MyApp()), // Use MyApp para acessar MyHomePage
+          MaterialPageRoute(builder: (context) => const MyApp()), // Use MyApp para acessar MyHomePage
         );
       },
     );
